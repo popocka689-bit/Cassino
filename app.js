@@ -304,6 +304,17 @@ const TMA = {
     this.watchOverlays();
     this.syncUserProfile();
     this.updateBackButton();
+    this.checkStartParam();
+  },
+
+  checkStartParam() {
+    let param = this.tg?.initDataUnsafe?.start_param || '';
+    if (!param && typeof window !== 'undefined' && window.location) {
+      param = new URLSearchParams(window.location.search).get('startapp') || '';
+    }
+    if (param && param.startsWith('C1_') && typeof redeemCheckCode === 'function') {
+      setTimeout(() => redeemCheckCode(param), 400);
+    }
   },
 
   syncViewport() {
@@ -740,6 +751,45 @@ function generateUid() {
   return Date.now() * 10000 + uidCounter;
 }
 
+function escapeHtml(str) {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function utf8ToBase64Url(str) {
+  const bytes = typeof TextEncoder !== 'undefined'
+    ? new TextEncoder().encode(str)
+    : Array.from(unescape(encodeURIComponent(str)), c => c.charCodeAt(0));
+  let bin = '';
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function base64UrlToUtf8(b64) {
+  let std = String(b64 || '').replace(/-/g, '+').replace(/_/g, '/');
+  while (std.length % 4) std += '=';
+  const bin = atob(std);
+  if (typeof TextDecoder !== 'undefined') {
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new TextDecoder().decode(bytes);
+  }
+  return decodeURIComponent(escape(bin));
+}
+
+function signPayload(str, salt = 'MRDRP3') {
+  let h = 2166136261;
+  const input = salt + ':' + str;
+  for (let i = 0; i < input.length; i++) {
+    h ^= input.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return (h >>> 0).toString(36);
+}
+
 const STATE = {
   balance: safeIntParse(localStorage.getItem('marar_balance'), 5000),
   inventory: safeJsonParse(localStorage.getItem('marar_inventory'), []),
@@ -760,6 +810,12 @@ const STATE = {
   activatedPromos: safeJsonParse(localStorage.getItem('marar_promos'), []),
   counters: safeJsonParse(localStorage.getItem('marar_counters'), { "mom": 0, "chat": 0 }),
   lastWheelSpin: safeIntParse(localStorage.getItem('marar_wheel_spin'), 0),
+  prestige: safeIntParse(localStorage.getItem('marar_prestige'), 0),
+  ownedTitles: safeJsonParse(localStorage.getItem('marar_owned_titles'), []),
+  equippedTitle: localStorage.getItem('marar_equipped_title') || '',
+  redeemedChecks: safeJsonParse(localStorage.getItem('marar_redeemed_checks'), []),
+  loanDebt: safeIntParse(localStorage.getItem('marar_loan_debt'), 0),
+  loanDueAt: safeIntParse(localStorage.getItem('marar_loan_due_at'), 0),
 
   currentCase: null,
   isCaseOpening: false,
@@ -841,11 +897,19 @@ function saveState() {
   localStorage.setItem('marar_promos', JSON.stringify(STATE.activatedPromos));
   localStorage.setItem('marar_counters', JSON.stringify(STATE.counters));
   localStorage.setItem('marar_wheel_spin', STATE.lastWheelSpin.toString());
+  localStorage.setItem('marar_prestige', (STATE.prestige || 0).toString());
+  localStorage.setItem('marar_owned_titles', JSON.stringify(STATE.ownedTitles || []));
+  localStorage.setItem('marar_equipped_title', STATE.equippedTitle || '');
+  localStorage.setItem('marar_redeemed_checks', JSON.stringify((STATE.redeemedChecks || []).slice(-200)));
+  localStorage.setItem('marar_loan_debt', (STATE.loanDebt || 0).toString());
+  localStorage.setItem('marar_loan_due_at', (STATE.loanDueAt || 0).toString());
 }
 
 function addXP(amount) {
+  const mult = 1 + (STATE.prestige || 0) * 0.25;
+  const xpGain = Math.max(1, Math.round(amount * mult));
   const oldLvl = Math.floor(Math.sqrt(STATE.profile.xp / 100)) + 1;
-  STATE.profile.xp += amount;
+  STATE.profile.xp += xpGain;
   const newLvl = Math.floor(Math.sqrt(STATE.profile.xp / 100)) + 1;
   saveState();
   updateUI();
@@ -944,6 +1008,20 @@ function updateUI() {
   if (hdrName) hdrName.textContent = STATE.profile.name;
   if (hdrLvl) hdrLvl.textContent = `LVL ${curLvl}`;
   if (hdrXp) hdrXp.style.width = `${pct}%`;
+
+  const hdrTitle = document.getElementById('headerTitleBadge');
+  if (hdrTitle) {
+    const eqTitle = typeof getEquippedTitleObj === 'function' ? getEquippedTitleObj() : null;
+    const parts = [];
+    if (STATE.prestige > 0) parts.push(`⭐P${STATE.prestige}`);
+    if (eqTitle) parts.push(`${eqTitle.icon} ${eqTitle.name}`);
+    if (parts.length > 0) {
+      hdrTitle.textContent = parts.join(' ');
+      hdrTitle.style.display = 'inline-block';
+    } else {
+      hdrTitle.style.display = 'none';
+    }
+  }
 
   // Пассивный доход бейдж
   const incomePerSec = calcTotalIncomePerSec();
@@ -1141,7 +1219,7 @@ function initNavigation() {
   if (freeMoneyBtn) {
     freeMoneyBtn.addEventListener('click', (e) => {
       sounds.playCoin();
-      const freeAmount = 1000;
+      const freeAmount = 1000 + (STATE.prestige || 0) * 250;
       STATE.balance += freeAmount;
       STATE.counters.mom += 1;
       addXP(15);
@@ -1238,6 +1316,7 @@ function initNavigation() {
   if (btnPromo && promoModal) {
     btnPromo.addEventListener('click', () => {
       sounds.playClick();
+      if (typeof populateCheckItemSelect === 'function') populateCheckItemSelect();
       promoModal.classList.add('open');
     });
   }
@@ -2498,8 +2577,331 @@ function initBusinessTicker() {
 }
 
 // ============================================================================
-// 12. ПРОФИЛЬ И КАСТОМИЗАЦИЯ АВАТАРОК
+// 12. ПРОФИЛЬ, СТАТУСЫ, ПРЕСТИЖ, МИКРОЗАЙМ И ПЕРЕНОС СЕЙВА
 // ============================================================================
+
+const TITLES_DATA = [
+  { id: 'rookie_king', name: 'Местный Лудоман', price: 25000, icon: '🎲' },
+  { id: 'plinko_lord', name: 'Сын Плинко', price: 100000, icon: '🪩' },
+  { id: 'dorm_baron', name: 'Барон Общаги', price: 500000, icon: '🏰' },
+  { id: 'district_oligarch', name: 'Олигарх Района', price: 2500000, icon: '🎩' },
+  { id: 'doshik_god', name: 'Хозяин Доширачной', price: 10000000, icon: '👑' }
+];
+
+const PRESTIGE_COST = 250000;
+const LOAN_PRINCIPAL = 5000;
+const LOAN_REPAY = 7500;
+const LOAN_DURATION_MS = 20000;
+let loanRaidTimeoutId = null;
+let loanUiIntervalId = null;
+let prestigeConfirmTimer = null;
+let prestigeArmed = false;
+
+function getEquippedTitleObj() {
+  if (!STATE.equippedTitle) return null;
+  return TITLES_DATA.find(t => t.id === STATE.equippedTitle) || null;
+}
+
+function copyTextReliably(text, fallbackInput = null) {
+  if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+    navigator.clipboard.writeText(text).then(() => {
+      showToast('📋 Скопировано в буфер обмена!', 'success');
+    }).catch(() => {
+      if (fallbackInput) {
+        fallbackInput.value = text;
+        fallbackInput.focus();
+        fallbackInput.select();
+      }
+      showToast('📋 Выдели и скопируй код вручную!', 'normal');
+    });
+    return;
+  }
+  if (fallbackInput) {
+    fallbackInput.value = text;
+    fallbackInput.focus();
+    fallbackInput.select();
+    try { document.execCommand('copy'); showToast('📋 Скопировано!', 'success'); } catch (e) {}
+  }
+}
+
+function exportSaveString() {
+  const snapshot = {
+    v: 1,
+    b: STATE.balance,
+    inv: STATE.inventory,
+    st: STATE.stats,
+    pr: STATE.profile,
+    biz: STATE.businesses,
+    bv: STATE.businessVault,
+    ach: STATE.achievements,
+    pm: STATE.activatedPromos,
+    cnt: STATE.counters,
+    wh: STATE.lastWheelSpin,
+    pt: STATE.prestige || 0,
+    ot: STATE.ownedTitles || [],
+    et: STATE.equippedTitle || '',
+    rc: (STATE.redeemedChecks || []).slice(-200)
+  };
+  const b64 = utf8ToBase64Url(JSON.stringify(snapshot));
+  const sig = signPayload('S1:' + b64, 'MRSAVE');
+  return `MRS1_${b64}_${sig}`;
+}
+
+function importSaveString(raw) {
+  const trimmed = String(raw || '').trim();
+  const match = trimmed.match(/MRS1_[A-Za-z0-9_-]+_[a-z0-9]+/);
+  if (!match) return { ok: false, err: 'Неверный формат кода сохранения!' };
+
+  const token = match[0].slice(5);
+  const sep = token.lastIndexOf('_');
+  if (sep <= 0) return { ok: false, err: 'Код сохранения повреждён!' };
+
+  const b64 = token.slice(0, sep);
+  const sig = token.slice(sep + 1);
+  if (signPayload('S1:' + b64, 'MRSAVE') !== sig) {
+    return { ok: false, err: 'Контрольная сумма сейва не совпадает!' };
+  }
+
+  let data;
+  try {
+    data = JSON.parse(base64UrlToUtf8(b64));
+  } catch (e) {
+    return { ok: false, err: 'Не удалось прочитать данные сейва!' };
+  }
+  if (!data || data.v !== 1 || !Number.isFinite(Number(data.b))) {
+    return { ok: false, err: 'Некорректная структура сейва!' };
+  }
+
+  STATE.balance = Math.max(0, Math.floor(Number(data.b)));
+  STATE.inventory = Array.isArray(data.inv) ? data.inv.slice(0, 500) : [];
+  if (data.st && typeof data.st === 'object') {
+    STATE.stats.opened = Math.max(0, Math.floor(Number(data.st.opened) || 0));
+    STATE.stats.jackpots = Math.max(0, Math.floor(Number(data.st.jackpots) || 0));
+    STATE.stats.battlesWon = Math.max(0, Math.floor(Number(data.st.battlesWon) || 0));
+  }
+  if (data.pr && typeof data.pr === 'object') {
+    STATE.profile.name = String(data.pr.name || STATE.profile.name).slice(0, 32);
+    STATE.profile.avatar = String(data.pr.avatar || STATE.profile.avatar).slice(0, 8);
+    STATE.profile.xp = Math.max(0, Math.floor(Number(data.pr.xp) || 0));
+  }
+  STATE.businesses = data.biz && typeof data.biz === 'object' ? data.biz : { shawarma: 0, mining: 0, notes: 0, crypto: 0 };
+  STATE.businessVault = Math.max(0, Math.floor(Number(data.bv) || 0));
+  STATE.achievements = data.ach && typeof data.ach === 'object' ? data.ach : {};
+  STATE.activatedPromos = Array.isArray(data.pm) ? data.pm : [];
+  STATE.counters = data.cnt && typeof data.cnt === 'object' ? data.cnt : { mom: 0, chat: 0 };
+  STATE.lastWheelSpin = Math.max(0, Math.floor(Number(data.wh) || 0));
+  STATE.prestige = Math.max(0, Math.floor(Number(data.pt) || 0));
+  STATE.ownedTitles = Array.isArray(data.ot) ? data.ot : [];
+  STATE.equippedTitle = typeof data.et === 'string' ? data.et : '';
+  STATE.redeemedChecks = Array.isArray(data.rc) ? data.rc.slice(-200) : [];
+  STATE.loanDebt = 0;
+  STATE.loanDueAt = 0;
+
+  saveState();
+  updateUI();
+  renderProfileModal();
+  if (typeof renderInventory === 'function' && document.getElementById('tab-inventory')?.classList.contains('active')) renderInventory();
+  if (typeof renderAchievements === 'function') renderAchievements();
+  if (typeof renderBusinessCards === 'function') renderBusinessCards();
+
+  return { ok: true };
+}
+
+function executeCollectorRaid() {
+  if (loanRaidTimeoutId) {
+    clearTimeout(loanRaidTimeoutId);
+    loanRaidTimeoutId = null;
+  }
+  if (loanUiIntervalId) {
+    clearInterval(loanUiIntervalId);
+    loanUiIntervalId = null;
+  }
+  if (STATE.loanDebt <= 0) return;
+
+  const debt = STATE.loanDebt;
+  const cashTaken = Math.min(STATE.balance, debt);
+  STATE.balance -= cashTaken;
+
+  let seizedName = '';
+  if (cashTaken < debt && STATE.inventory.length > 0) {
+    let minIdx = 0;
+    for (let i = 1; i < STATE.inventory.length; i++) {
+      if ((STATE.inventory[i].price || 0) < (STATE.inventory[minIdx].price || 0)) minIdx = i;
+    }
+    const [seized] = STATE.inventory.splice(minIdx, 1);
+    seizedName = seized ? seized.name : '';
+  }
+
+  STATE.loanDebt = 0;
+  STATE.loanDueAt = 0;
+  saveState();
+  updateUI();
+  if (typeof renderInventory === 'function' && document.getElementById('tab-inventory')?.classList.contains('active')) {
+    renderInventory();
+  }
+  if (document.getElementById('profileModal')?.classList.contains('open')) {
+    renderProfileModal();
+  }
+
+  if (typeof document !== 'undefined' && document.body) {
+    document.body.classList.add('collector-raid');
+    setTimeout(() => document.body.classList.remove('collector-raid'), 2000);
+  }
+  sounds.playExplosion();
+  if (typeof TMA !== 'undefined') TMA.hapticNotify('error');
+
+  const extraMsg = seizedName ? ` И отжали «<b>${escapeHtml(seizedName)}</b>» в залог!` : '';
+  showToast(`🚨 <b>КОЛЛЕКТОРЫ ЗАШЛИ В ОБЩАГУ!</b> Списано ${cashTaken.toLocaleString('ru-RU')} MD.${extraMsg}`, 'normal');
+}
+
+function scheduleCollectorRaid() {
+  if (STATE.loanDebt <= 0) return;
+  if (loanRaidTimeoutId) clearTimeout(loanRaidTimeoutId);
+  const delay = Math.max(0, STATE.loanDueAt - Date.now());
+  loanRaidTimeoutId = setTimeout(executeCollectorRaid, delay);
+}
+
+function updateLoanUI() {
+  const statusEl = document.getElementById('loanStatusText');
+  const btnLoan = document.getElementById('btnTakeLoan');
+  if (!statusEl || !btnLoan) return;
+
+  if (STATE.loanDebt > 0) {
+    const secLeft = Math.max(0, Math.ceil((STATE.loanDueAt - Date.now()) / 1000));
+    statusEl.innerHTML = `🚨 <b>Долг ${STATE.loanDebt.toLocaleString('ru-RU')} MD!</b> Коллекторы будут через <b>${secLeft} сек</b>.`;
+    btnLoan.textContent = `💸 ПОГАСИТЬ (${STATE.loanDebt.toLocaleString('ru-RU')} MD)`;
+  } else {
+    statusEl.textContent = `Дают ${LOAN_PRINCIPAL.toLocaleString('ru-RU')} MD сразу. Через 20 сек коллекторы заберут ${LOAN_REPAY.toLocaleString('ru-RU')} MD!`;
+    btnLoan.textContent = `🦈 ВЗЯТЬ +${LOAN_PRINCIPAL.toLocaleString('ru-RU')} MD`;
+  }
+}
+
+function ensureLoanUiTicker() {
+  if (loanUiIntervalId) {
+    clearInterval(loanUiIntervalId);
+    loanUiIntervalId = null;
+  }
+  if (STATE.loanDebt <= 0) return;
+  loanUiIntervalId = setInterval(() => {
+    const profModal = document.getElementById('profileModal');
+    if (!profModal?.classList.contains('open') || STATE.loanDebt <= 0) {
+      clearInterval(loanUiIntervalId);
+      loanUiIntervalId = null;
+      return;
+    }
+    updateLoanUI();
+  }, 1000);
+}
+
+function initProfileEnhancements() {
+  const btnPrestige = document.getElementById('btnDoPrestige');
+  if (btnPrestige) {
+    btnPrestige.addEventListener('click', () => {
+      if (STATE.balance < PRESTIGE_COST) {
+        sounds.playClick();
+        return showToast(`⭐ Для Престижа нужно минимум <b>${PRESTIGE_COST.toLocaleString('ru-RU')} MD</b> на балансе!`);
+      }
+      if (!prestigeArmed) {
+        prestigeArmed = true;
+        btnPrestige.classList.add('confirming');
+        btnPrestige.textContent = '🔥 ТОЧНО СБРОСИТЬ? ЖМИ ЕЩЁ РАЗ!';
+        clearTimeout(prestigeConfirmTimer);
+        prestigeConfirmTimer = setTimeout(() => {
+          prestigeArmed = false;
+          renderProfileModal();
+        }, 4000);
+        return;
+      }
+
+      clearTimeout(prestigeConfirmTimer);
+      prestigeArmed = false;
+      btnPrestige.classList.remove('confirming');
+
+      STATE.prestige = (STATE.prestige || 0) + 1;
+      STATE.balance = 1000;
+      STATE.inventory = [];
+      STATE.businesses = { shawarma: 0, mining: 0, notes: 0, crypto: 0 };
+      STATE.businessVault = 0;
+      STATE.loanDebt = 0;
+      STATE.loanDueAt = 0;
+      if (loanRaidTimeoutId) {
+        clearTimeout(loanRaidTimeoutId);
+        loanRaidTimeoutId = null;
+      }
+
+      saveState();
+      updateUI();
+      renderProfileModal();
+      if (typeof renderInventory === 'function' && document.getElementById('tab-inventory')?.classList.contains('active')) renderInventory();
+      if (typeof renderBusinessCards === 'function') renderBusinessCards();
+
+      sounds.playWin('exotic');
+      confetti.burst(80);
+      if (typeof TMA !== 'undefined') TMA.hapticNotify('success');
+      showToast(`⭐ <b>НОВЫЙ ПРЕСТИЖ x${STATE.prestige}!</b> Постоянный бонус к XP и «маме» +${STATE.prestige * 25}%!`, 'gold');
+    });
+  }
+
+  const btnLoan = document.getElementById('btnTakeLoan');
+  if (btnLoan) {
+    btnLoan.addEventListener('click', () => {
+      if (STATE.loanDebt > 0) {
+        if (STATE.balance < STATE.loanDebt) {
+          sounds.playExplosion();
+          return showToast(`❌ Не хватает MD закрыть долг! Нужно ${STATE.loanDebt.toLocaleString('ru-RU')} MD.`);
+        }
+        STATE.balance -= STATE.loanDebt;
+        STATE.loanDebt = 0;
+        STATE.loanDueAt = 0;
+        if (loanRaidTimeoutId) {
+          clearTimeout(loanRaidTimeoutId);
+          loanRaidTimeoutId = null;
+        }
+        saveState();
+        updateUI();
+        renderProfileModal();
+        sounds.playCoin();
+        showToast('😌 Долг коллекторам закрыт досрочно! Они уехали ни с чем.', 'success');
+        return;
+      }
+
+      sounds.playCoin();
+      STATE.balance += LOAN_PRINCIPAL;
+      STATE.loanDebt = LOAN_REPAY;
+      STATE.loanDueAt = Date.now() + LOAN_DURATION_MS;
+      saveState();
+      updateUI();
+      renderProfileModal();
+      scheduleCollectorRaid();
+      ensureLoanUiTicker();
+      showToast(`🦈 Взято <b>+${LOAN_PRINCIPAL.toLocaleString('ru-RU')} MD</b>! Через 20 сек придут забирать <b>${LOAN_REPAY.toLocaleString('ru-RU')} MD</b>!`, 'gold');
+    });
+  }
+
+  const btnExport = document.getElementById('btnExportSave');
+  const importInput = document.getElementById('importSaveInput');
+  const btnImport = document.getElementById('btnImportSave');
+  if (btnExport) {
+    btnExport.addEventListener('click', () => {
+      sounds.playClick();
+      const saveCode = exportSaveString();
+      copyTextReliably(saveCode, importInput);
+    });
+  }
+  if (btnImport && importInput) {
+    btnImport.addEventListener('click', () => {
+      const res = importSaveString(importInput.value);
+      if (!res.ok) {
+        sounds.playExplosion();
+        return showToast(`❌ ${res.err}`);
+      }
+      importInput.value = '';
+      sounds.playWin('rare');
+      confetti.burst(40);
+      showToast('💾 Сохранение успешно загружено!', 'gold');
+    });
+  }
+}
 
 function renderProfileModal() {
   const row = document.getElementById('avatarOptionsRow');
@@ -2527,6 +2929,82 @@ function renderProfileModal() {
   document.getElementById('profileXp').textContent = `${STATE.profile.xp} XP`;
   document.getElementById('profileBattles').textContent = STATE.stats.battlesWon;
   document.getElementById('profileIncome').textContent = `+${calcTotalIncomePerSec()} MD/сек`;
+
+  const prestigeEl = document.getElementById('profilePrestigeStat');
+  if (prestigeEl) prestigeEl.textContent = `⭐ ${STATE.prestige || 0}`;
+
+  const eqTitle = getEquippedTitleObj();
+  const subEl = document.getElementById('profileTitleSub');
+  if (subEl) {
+    const titleName = eqTitle ? `${eqTitle.icon} ${eqTitle.name}` : 'Первокурсник Общаги';
+    const presSuffix = STATE.prestige > 0 ? ` • ⭐ Престиж ${STATE.prestige}` : '';
+    subEl.textContent = `Звание: ${titleName}${presSuffix}`;
+  }
+
+  // Рендер статусов
+  const titlesGrid = document.getElementById('profileTitlesGrid');
+  if (titlesGrid) {
+    titlesGrid.innerHTML = TITLES_DATA.map(t => {
+      const isOwned = (STATE.ownedTitles || []).includes(t.id);
+      const isEquipped = STATE.equippedTitle === t.id;
+      const btnText = isEquipped ? '✅ НАДЕТО' : (isOwned ? 'НАДЕТЬ' : `КУПИТЬ (${t.price.toLocaleString('ru-RU')})`);
+      return `
+        <div class="title-shop-card ${isOwned ? 'owned' : ''} ${isEquipped ? 'equipped' : ''}">
+          <div class="title-shop-name">${t.icon} ${t.name}</div>
+          <div class="title-shop-price">${isOwned ? 'Куплено' : `${t.price.toLocaleString('ru-RU')} MD`}</div>
+          <button type="button" class="btn-title-action" data-title-id="${t.id}">${btnText}</button>
+        </div>
+      `;
+    }).join('');
+
+    titlesGrid.querySelectorAll('.btn-title-action').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const title = TITLES_DATA.find(x => x.id === btn.dataset.titleId);
+        if (!title) return;
+        const owned = (STATE.ownedTitles || []).includes(title.id);
+        if (owned) {
+          sounds.playClick();
+          STATE.equippedTitle = STATE.equippedTitle === title.id ? '' : title.id;
+          saveState();
+          updateUI();
+          renderProfileModal();
+          showToast(STATE.equippedTitle ? `👑 Статус «<b>${title.icon} ${title.name}</b>» надет!` : '🪪 Статус снят.');
+          return;
+        }
+        if (STATE.balance < title.price) {
+          sounds.playExplosion();
+          return showToast(`❌ Нужно <b>${title.price.toLocaleString('ru-RU')} MD</b> для статуса «${title.name}»!`);
+        }
+        STATE.balance -= title.price;
+        if (!Array.isArray(STATE.ownedTitles)) STATE.ownedTitles = [];
+        STATE.ownedTitles.push(title.id);
+        STATE.equippedTitle = title.id;
+        saveState();
+        updateUI();
+        renderProfileModal();
+        sounds.playWin('rare');
+        confetti.burst(40);
+        showToast(`👑 Куплен и надет статус «<b>${title.icon} ${title.name}</b>»!`, 'gold');
+      });
+    });
+  }
+
+  // Престиж
+  const btnPrestige = document.getElementById('btnDoPrestige');
+  const prestigeDesc = document.getElementById('prestigeDesc');
+  if (btnPrestige && prestigeDesc) {
+    const bonusPct = (STATE.prestige || 0) * 25;
+    prestigeDesc.textContent = `Бонус сейчас: +${bonusPct}% к XP и «маме». Сброс от ${PRESTIGE_COST.toLocaleString('ru-RU')} MD даёт +25%.`;
+    if (!prestigeArmed) {
+      btnPrestige.classList.remove('confirming');
+      btnPrestige.textContent = STATE.balance >= PRESTIGE_COST
+        ? `⭐ СДЕЛАТЬ ПРЕСТИЖ (#${(STATE.prestige || 0) + 1})`
+        : `⭐ НУЖНО ${PRESTIGE_COST.toLocaleString('ru-RU')} MD`;
+    }
+  }
+
+  updateLoanUI();
+  ensureLoanUiTicker();
 }
 
 // ============================================================================
@@ -4271,7 +4749,10 @@ function initLiveChat() {
     if (!text) return;
 
     sounds.playClick();
-    appendChatMessage(STATE.profile.name, 'ИГРОК', text, true);
+    const eqTitle = typeof getEquippedTitleObj === 'function' ? getEquippedTitleObj() : null;
+    const pPrefix = STATE.prestige > 0 ? `⭐P${STATE.prestige} ` : '';
+    const pBadge = `${pPrefix}${eqTitle ? eqTitle.name : 'ИГРОК'}`;
+    appendChatMessage(STATE.profile.name, pBadge, text, true);
     input.value = '';
 
     STATE.counters.chat += 1;
@@ -4291,10 +4772,10 @@ function appendChatMessage(user, badge, text, isMe = false) {
 
   msgEl.innerHTML = `
     <div class="chat-user-line">
-      <span class="chat-badge">${badge}</span>
-      <span class="chat-author ${isMe ? 'is-me' : ''} ${isSystem ? 'is-system' : ''}">${user}:</span>
+      <span class="chat-badge">${escapeHtml(badge)}</span>
+      <span class="chat-author ${isMe ? 'is-me' : ''} ${isSystem ? 'is-system' : ''}">${escapeHtml(user)}:</span>
     </div>
-    <div class="chat-text">${text}</div>
+    <div class="chat-text">${escapeHtml(text)}</div>
   `;
 
   container.appendChild(msgEl);
@@ -4313,6 +4794,93 @@ const PROMO_CODES = {
   KOT: { reward: 300, desc: 'Кот Шлёпа + 300 MD', item: { id: 'kt1', name: 'Кот Шлёпа (Оригинал)', icon: '🐱', rarity: 'rare', price: 650 } }
 };
 
+function encodeGiftCheck(payload) {
+  const b64 = utf8ToBase64Url(JSON.stringify(payload));
+  const sig = signPayload('C1:' + b64, 'MRCHK');
+  return `C1_${b64}_${sig}`;
+}
+
+function redeemCheckCode(rawInput) {
+  const match = String(rawInput || '').trim().match(/C1_[A-Za-z0-9_-]+_[a-z0-9]+/);
+  if (!match) return { ok: false, err: 'Код чека не найден!' };
+
+  const token = match[0].slice(3);
+  const sep = token.lastIndexOf('_');
+  if (sep <= 0) return { ok: false, err: 'Чек повреждён!' };
+
+  const b64 = token.slice(0, sep);
+  const sig = token.slice(sep + 1);
+  if (signPayload('C1:' + b64, 'MRCHK') !== sig) {
+    return { ok: false, err: 'Подпись чека неверна или чек подделан!' };
+  }
+
+  let data;
+  try {
+    data = JSON.parse(base64UrlToUtf8(b64));
+  } catch (e) {
+    return { ok: false, err: 'Не удалось расшифровать чек!' };
+  }
+  if (!data || !data.id) return { ok: false, err: 'Некорректные данные чека!' };
+
+  if (!Array.isArray(STATE.redeemedChecks)) STATE.redeemedChecks = [];
+  if (STATE.redeemedChecks.includes(data.id)) {
+    return { ok: false, err: 'Этот чек уже был активирован на этом устройстве!' };
+  }
+
+  const sender = escapeHtml(String(data.f || 'Кореш').slice(0, 32));
+  let rewardLabel = '';
+
+  if (data.t === 'm') {
+    const amount = Math.floor(Number(data.v) || 0);
+    if (amount <= 0) return { ok: false, err: 'Пустой чек!' };
+    STATE.balance += amount;
+    rewardLabel = `+${amount.toLocaleString('ru-RU')} MD`;
+  } else if (data.t === 'i' && data.it && typeof data.it === 'object') {
+    const rarity = RARITIES[data.it.rarity] ? data.it.rarity : 'common';
+    const item = {
+      id: String(data.it.id || 'gift'),
+      name: String(data.it.name || 'Подарок').slice(0, 64),
+      icon: String(data.it.icon || '🎁').slice(0, 8),
+      rarity,
+      price: Math.max(1, Math.floor(Number(data.it.price) || 100)),
+      uid: generateUid()
+    };
+    STATE.inventory.unshift(item);
+    rewardLabel = `${item.icon} ${escapeHtml(item.name)}`;
+  } else {
+    return { ok: false, err: 'Неизвестный тип чека!' };
+  }
+
+  STATE.redeemedChecks.push(data.id);
+  if (STATE.redeemedChecks.length > 200) {
+    STATE.redeemedChecks = STATE.redeemedChecks.slice(-200);
+  }
+
+  saveState();
+  updateUI();
+  if (typeof renderInventory === 'function' && document.getElementById('tab-inventory')?.classList.contains('active')) {
+    renderInventory();
+  }
+
+  sounds.playWin('rare');
+  confetti.burst(55);
+  if (typeof TMA !== 'undefined') TMA.hapticNotify('success');
+  showToast(`🤝 Чек от <b>${sender}</b> активирован: <b>${rewardLabel}</b>!`, 'gold');
+  return { ok: true, rewardLabel };
+}
+
+function populateCheckItemSelect() {
+  const select = document.getElementById('checkItemSelect');
+  if (!select) return;
+  if (!STATE.inventory.length) {
+    select.innerHTML = '<option value="">Инвентарь пуст</option>';
+    return;
+  }
+  select.innerHTML = STATE.inventory.map(item =>
+    `<option value="${item.uid}">${escapeHtml(item.icon)} ${escapeHtml(item.name)} (${item.price} MD)</option>`
+  ).join('');
+}
+
 function initPromoSystem() {
   const btn = document.getElementById('btnActivatePromo');
   const input = document.getElementById('promoCodeInput');
@@ -4320,9 +4888,122 @@ function initPromoSystem() {
   const banModal = document.getElementById('banModal');
   if (!btn || !input) return;
 
+  // Переключение режима чека (монеты / предмет)
+  const mdRow = document.getElementById('checkMdRow');
+  const itemRow = document.getElementById('checkItemRow');
+  document.querySelectorAll('.btn-check-mode').forEach(tab => {
+    tab.addEventListener('click', () => {
+      sounds.playClick();
+      document.querySelectorAll('.btn-check-mode').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      const isItem = tab.dataset.mode === 'item';
+      if (mdRow) mdRow.style.display = isItem ? 'none' : 'flex';
+      if (itemRow) itemRow.style.display = isItem ? 'flex' : 'none';
+      if (isItem) populateCheckItemSelect();
+    });
+  });
+
+  const showGeneratedCheck = (code) => {
+    const box = document.getElementById('generatedCheckBox');
+    const out = document.getElementById('generatedCheckCode');
+    if (box && out) {
+      out.value = code;
+      box.style.display = 'flex';
+    }
+  };
+
+  const btnCreateCheck = document.getElementById('btnCreateCheck');
+  if (btnCreateCheck) {
+    btnCreateCheck.addEventListener('click', () => {
+      const amtInput = document.getElementById('checkAmountInput');
+      const amount = Math.floor(parseInt(amtInput?.value, 10) || 0);
+      if (amount < 50) return showToast('⚠️ Минимальный чек — 50 MD!');
+      if (STATE.balance < amount) return showToast('❌ Недостаточно MD на балансе!');
+
+      STATE.balance -= amount;
+      const code = encodeGiftCheck({
+        id: `${Date.now().toString(36)}${Math.floor(Math.random() * 1296).toString(36)}`,
+        t: 'm',
+        v: amount,
+        f: STATE.profile.name
+      });
+      saveState();
+      updateUI();
+      sounds.playCoin();
+      showGeneratedCheck(code);
+      showToast(`✍️ Чек на <b>${amount.toLocaleString('ru-RU')} MD</b> выписан! Отправь код другу.`, 'gold');
+    });
+  }
+
+  const btnCreateItemCheck = document.getElementById('btnCreateItemCheck');
+  if (btnCreateItemCheck) {
+    btnCreateItemCheck.addEventListener('click', () => {
+      const select = document.getElementById('checkItemSelect');
+      const uid = select ? Number(select.value) : 0;
+      const idx = STATE.inventory.findIndex(x => x.uid === uid);
+      if (idx === -1) return showToast('⚠️ Выбери предмет из инвентаря!');
+
+      const [item] = STATE.inventory.splice(idx, 1);
+      const code = encodeGiftCheck({
+        id: `${Date.now().toString(36)}${Math.floor(Math.random() * 1296).toString(36)}`,
+        t: 'i',
+        it: { id: item.id, name: item.name, icon: item.icon, rarity: item.rarity, price: item.price },
+        f: STATE.profile.name
+      });
+      saveState();
+      updateUI();
+      populateCheckItemSelect();
+      if (typeof renderInventory === 'function' && document.getElementById('tab-inventory')?.classList.contains('active')) {
+        renderInventory();
+      }
+      sounds.playCoin();
+      showGeneratedCheck(code);
+      showToast(`✍️ Предмет «<b>${escapeHtml(item.name)}</b>» упакован в чек!`, 'gold');
+    });
+  }
+
+  const btnCopyCheck = document.getElementById('btnCopyCheckCode');
+  const genOut = document.getElementById('generatedCheckCode');
+  if (btnCopyCheck && genOut) {
+    btnCopyCheck.addEventListener('click', () => {
+      if (!genOut.value) return;
+      sounds.playClick();
+      copyTextReliably(genOut.value, genOut);
+    });
+  }
+
+  const btnShareCheck = document.getElementById('btnShareCheckTg');
+  if (btnShareCheck && genOut) {
+    btnShareCheck.addEventListener('click', () => {
+      if (!genOut.value) return;
+      sounds.playClick();
+      const shareText = `Лови чек в MARAR DROP! Вставь этот код во вкладку «Промо / Чеки»:\n${genOut.value}`;
+      const url = `https://t.me/share/url?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent(shareText)}`;
+      if (typeof TMA !== 'undefined' && TMA.tg && typeof TMA.tg.openTelegramLink === 'function') {
+        TMA.tg.openTelegramLink(url);
+      } else {
+        window.open(url, '_blank');
+      }
+    });
+  }
+
   btn.addEventListener('click', () => {
-    const code = input.value.trim().toUpperCase();
-    if (!code) return showToast('⚠️ Введи промокод!');
+    const rawCode = input.value.trim();
+    if (!rawCode) return showToast('⚠️ Введи промокод или чек!');
+
+    // Сначала проверяем чек (Base64url чувствителен к регистру!)
+    if (/C1_[A-Za-z0-9_-]+_[a-z0-9]+/.test(rawCode)) {
+      const res = redeemCheckCode(rawCode);
+      if (!res.ok) {
+        sounds.playExplosion();
+        return showToast(`❌ ${res.err}`);
+      }
+      input.value = '';
+      promoModal.classList.remove('open');
+      return;
+    }
+
+    const code = rawCode.toUpperCase();
 
     if (code === 'ADMIN') {
       sounds.playExplosion();
@@ -5546,6 +6227,8 @@ document.addEventListener('DOMContentLoaded', () => {
   initBusinessTicker();
   initLiveChat();
   initPromoSystem();
+  initProfileEnhancements();
+  scheduleCollectorRaid();
   initWheel();
   initLiveTicker();
   renderAchievements();

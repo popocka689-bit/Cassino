@@ -1473,7 +1473,7 @@ body {
    МОДАЛКА ПРОФИЛЯ
    ========================================================================== */
 .profile-modal-container {
-  max-width: 520px;
+  max-width: 560px;
 }
 
 .avatar-options-row {
@@ -4122,5 +4122,311 @@ body.is-tma .ticker-badge {
   }
   .case-card {
     will-change: auto;
+  }
+}
+
+/* ==========================================================================
+   ЭТАП 1: СТАТУСЫ, ПРЕСТИЖ, МИКРОЗАЙМ, ЧЕКИ И СЕЙВ
+   ========================================================================== */
+.profile-title-badge {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: var(--radius-full);
+  background: rgba(251, 191, 36, 0.16);
+  border: 1px solid rgba(251, 191, 36, 0.45);
+  color: var(--color-gold);
+  white-space: nowrap;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-section-card {
+  margin-top: 14px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+}
+
+.profile-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.profile-section-head h4,
+.prestige-card h4,
+.loan-card h4,
+.check-creator-head h4 {
+  font-size: 13px;
+  font-weight: 800;
+  color: #fff;
+  margin: 0;
+}
+
+.profile-section-note {
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+.profile-titles-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.title-shop-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.title-shop-card.owned {
+  border-color: rgba(56, 189, 248, 0.4);
+}
+
+.title-shop-card.equipped {
+  border-color: var(--color-gold);
+  background: rgba(251, 191, 36, 0.08);
+}
+
+.title-shop-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.title-shop-price {
+  font-size: 11px;
+  color: var(--color-gold);
+  font-family: var(--font-display);
+}
+
+.btn-title-action {
+  margin-top: auto;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.title-shop-card.equipped .btn-title-action {
+  background: rgba(251, 191, 36, 0.22);
+  border-color: var(--color-gold);
+  color: var(--color-gold);
+}
+
+.profile-duo-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.prestige-card {
+  border-color: rgba(251, 191, 36, 0.35);
+}
+
+.loan-card {
+  border-color: rgba(255, 32, 78, 0.4);
+}
+
+.profile-mini-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin: 6px 0 10px;
+}
+
+.btn-prestige,
+.btn-loan,
+.btn-save-export,
+.btn-save-import,
+.btn-copy-check,
+.btn-share-check {
+  width: 100%;
+  padding: 9px 10px;
+  font-size: 11px;
+  font-weight: 800;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  cursor: pointer;
+}
+
+.btn-prestige {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.28), rgba(245, 158, 11, 0.14));
+  border-color: rgba(251, 191, 36, 0.6);
+  color: #fde68a;
+}
+
+.btn-prestige.confirming {
+  background: var(--red-neon);
+  border-color: #fff;
+  color: #fff;
+}
+
+.btn-loan {
+  background: linear-gradient(135deg, rgba(255, 32, 78, 0.3), rgba(190, 18, 60, 0.18));
+  border-color: rgba(255, 32, 78, 0.6);
+  color: #fecdd3;
+}
+
+.save-io-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.btn-save-export {
+  background: rgba(56, 189, 248, 0.16);
+  border-color: rgba(56, 189, 248, 0.45);
+  color: #bae6fd;
+}
+
+.save-import-row {
+  display: flex;
+  gap: 8px;
+}
+
+.save-io-input {
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+.btn-save-import {
+  width: auto;
+  flex-shrink: 0;
+  padding: 8px 14px;
+  background: rgba(16, 185, 129, 0.2);
+  border-color: rgba(16, 185, 129, 0.5);
+  color: #a7f3d0;
+}
+
+.check-creator-card {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.check-creator-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.check-mode-tabs {
+  display: flex;
+  gap: 6px;
+}
+
+.btn-check-mode {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: var(--text-muted);
+  border-radius: 6px;
+  padding: 5px 9px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-check-mode.active {
+  background: rgba(255, 32, 78, 0.22);
+  border-color: var(--red-neon);
+  color: #fff;
+}
+
+.check-input-wrap {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.check-item-select {
+  font-family: var(--font-main);
+  font-size: 12px;
+}
+
+.generated-check-box {
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.generated-check-input {
+  width: 100%;
+  font-size: 11px;
+  padding: 8px 10px;
+  color: #6ee7b7;
+}
+
+.generated-check-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-copy-check {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.btn-share-check {
+  background: rgba(56, 189, 248, 0.22);
+  border-color: rgba(56, 189, 248, 0.55);
+  color: #bae6fd;
+}
+
+body.collector-raid {
+  animation: collectorShake 0.35s ease-in-out 5;
+}
+
+body.collector-raid::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  border: 6px solid #ff204e;
+  background: rgba(255, 32, 78, 0.16);
+  pointer-events: none;
+  z-index: 9999;
+}
+
+@keyframes collectorShake {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  25% { transform: translate3d(-5px, 2px, 0); }
+  75% { transform: translate3d(5px, -2px, 0); }
+}
+
+@media (max-width: 640px) {
+  .profile-titles-grid,
+  .profile-duo-grid {
+    grid-template-columns: 1fr;
+  }
+  .check-input-wrap,
+  .save-import-row,
+  .generated-check-actions {
+    flex-direction: column;
+  }
+  .btn-save-import {
+    width: 100%;
+  }
+  .profile-title-badge {
+    max-width: 100px;
   }
 }

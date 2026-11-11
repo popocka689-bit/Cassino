@@ -3,12 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <title>MARAR DROP 3.0 — Мега Шуточное Казино (Ультимативное Издание)</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,600;0,700;0,900;1,800&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
   <!-- Конфетти холст -->
@@ -62,6 +63,7 @@
           <div class="profile-name-line">
             <span class="profile-name" id="headerPlayerName">Студент_Марара</span>
             <span class="profile-lvl-badge" id="headerLvlBadge">LVL 1</span>
+            <span class="profile-title-badge" id="headerTitleBadge" style="display: none;"></span>
           </div>
           <div class="profile-xp-bar">
             <div class="xp-fill" id="headerXpFill" style="width: 15%"></div>
@@ -78,8 +80,8 @@
           <button class="btn-top-special" id="btnOpenWheel" title="Колесо фортуны">
             🎡 Колесо
           </button>
-          <button class="btn-top-special" id="btnOpenPromo" title="Ввести промокод">
-            🎁 Промокод
+          <button class="btn-top-special" id="btnOpenPromo" title="Промокоды и чеки корешам">
+            🎁 Промо / Чеки
           </button>
           <button class="btn-top-special btn-chat-toggle" id="btnToggleChat" title="Открыть чат">
             💬 Чат <span class="online-indicator"></span>
@@ -1108,6 +1110,46 @@
         <div class="pstat-row"><span>Всего заработано XP:</span> <b id="profileXp">0 XP</b></div>
         <div class="pstat-row"><span>Побед в битвах кейсов:</span> <b id="profileBattles">0</b></div>
         <div class="pstat-row"><span>Пассивный доход:</span> <b id="profileIncome">+0 MD/сек</b></div>
+        <div class="pstat-row"><span>Престиж:</span> <b id="profilePrestigeStat">⭐ 0</b></div>
+      </div>
+
+      <!-- Магазин понтовых статусов -->
+      <div class="profile-section-card">
+        <div class="profile-section-head">
+          <h4>👑 Статусы и понты</h4>
+          <span class="profile-section-note">Вывод лишних MD + бейдж в чате</span>
+        </div>
+        <div class="profile-titles-grid" id="profileTitlesGrid"></div>
+      </div>
+
+      <!-- Престиж и Микрозайм -->
+      <div class="profile-duo-grid">
+        <div class="profile-section-card prestige-card">
+          <h4>⭐ ПРЕСТИЖ</h4>
+          <p class="profile-mini-desc" id="prestigeDesc">Сбрось баланс и бизнесы от 250 000 MD ради короны и +25% к XP и «маме».</p>
+          <button class="btn btn-prestige" id="btnDoPrestige">⭐ ПРЕСТИЖ (от 250k)</button>
+        </div>
+
+        <div class="profile-section-card loan-card">
+          <h4>🦈 БЫСТРОДЕНГИ 300%</h4>
+          <p class="profile-mini-desc" id="loanStatusText">Дают 5 000 MD сразу. Через 20 сек коллекторы заберут 7 500 MD!</p>
+          <button class="btn btn-loan" id="btnTakeLoan">🦈 ВЗЯТЬ +5 000 MD</button>
+        </div>
+      </div>
+
+      <!-- Экспорт / Импорт сохранения -->
+      <div class="profile-section-card">
+        <div class="profile-section-head">
+          <h4>💾 Сейв (перенос / бэкап)</h4>
+          <span class="profile-section-note">Версия v3.4</span>
+        </div>
+        <div class="save-io-controls">
+          <button class="btn btn-save-export" id="btnExportSave">📋 Скопировать сейв</button>
+          <div class="save-import-row">
+            <input type="text" id="importSaveInput" class="promo-input save-io-input" placeholder="Вставь код сейва (MRS1_...)">
+            <button class="btn btn-save-import" id="btnImportSave">📥 Загрузить</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -1152,16 +1194,42 @@
     <div class="modal-container promo-modal-container">
       <button class="modal-close" id="closePromoModal">&times;</button>
       <div class="modal-header">
-        <h3 class="modal-case-title">🎁 СЕКРЕТНЫЕ ПРОМОКОДЫ</h3>
-        <p class="modal-case-sub">Введи промокод и получи халявные монеты или секретные призы!</p>
+        <h3 class="modal-case-title">🎁 ПРОМОКОДЫ И ЧЕКИ</h3>
+        <p class="modal-case-sub">Введи промокод / чек от друга или выпиши свой чек корешу!</p>
       </div>
       <div class="promo-box">
-        <input type="text" id="promoCodeInput" placeholder="ВВЕДИТЕ ПРОМОКОД..." class="promo-input">
+        <input type="text" id="promoCodeInput" placeholder="ПРОМОКОД ИЛИ ЧЕК (C1_...)" class="promo-input">
         <button class="btn btn-primary-glow btn-activate-promo" id="btnActivatePromo">АКТИВИРОВАТЬ</button>
       </div>
       <div class="promo-hints">
         <span class="promo-hints-title">💡 Подсказки для тестеров:</span>
         <code>MARAR2026</code> (+1 000 MD), <code>SHAVUHA</code> (+500 MD + Шаурма), <code>BABLO</code> (+2 500 MD), <code>ADMIN</code> (Шуточный бан).
+      </div>
+
+      <!-- Передача MD или предметов корешам без сервера -->
+      <div class="check-creator-card">
+        <div class="check-creator-head">
+          <h4>🤝 Выписать чек корешу</h4>
+          <div class="check-mode-tabs">
+            <button type="button" class="btn-check-mode active" data-mode="md">💰 Монеты</button>
+            <button type="button" class="btn-check-mode" data-mode="item">🎒 Предмет</button>
+          </div>
+        </div>
+        <div class="check-input-wrap" id="checkMdRow">
+          <input type="number" id="checkAmountInput" class="promo-input" min="50" step="50" value="1000" placeholder="Сумма MD">
+          <button type="button" class="btn btn-primary-glow" id="btnCreateCheck">✍️ СОЗДАТЬ ЧЕК</button>
+        </div>
+        <div class="check-input-wrap" id="checkItemRow" style="display: none;">
+          <select id="checkItemSelect" class="promo-input check-item-select"></select>
+          <button type="button" class="btn btn-primary-glow" id="btnCreateItemCheck">✍️ ОТПРАВИТЬ</button>
+        </div>
+        <div class="generated-check-box" id="generatedCheckBox" style="display: none;">
+          <input type="text" id="generatedCheckCode" class="promo-input generated-check-input" readonly>
+          <div class="generated-check-actions">
+            <button type="button" class="btn btn-copy-check" id="btnCopyCheckCode">📋 Скопировать</button>
+            <button type="button" class="btn btn-share-check" id="btnShareCheckTg">📨 Переслать в TG</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -1344,6 +1412,6 @@
   <!-- ВСПЛЫВАЮЩИЕ УВЕДОМЛЕНИЯ -->
   <div class="toast-container" id="toastContainer"></div>
 
-  <script src="app.js"></script>
+  <script src="app.js?v=4"></script>
 </body>
 </html>
