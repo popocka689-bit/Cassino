@@ -658,8 +658,9 @@ class ConfettiFX {
 
   burst(count = 70) {
     if (!this.canvas || !this.ctx) return;
+    const spawnCount = (typeof window !== 'undefined' && window.innerWidth <= 768) ? Math.min(count, 35) : count;
     const colors = ['#ff204e', '#fbbf24', '#ffffff', '#38bdf8', '#10b981', '#c084fc'];
-    for (let i = 0; i < count; i++) {
+    for (let i = 0; i < spawnCount; i++) {
       this.particles.push({
         x: window.innerWidth / 2,
         y: window.innerHeight / 2,
@@ -1160,6 +1161,10 @@ function initNavigation() {
     chatToggle.addEventListener('click', () => {
       sounds.playClick();
       chatDrawer.classList.toggle('open');
+      if (chatDrawer.classList.contains('open')) {
+        const cm = document.getElementById('chatMessages');
+        if (cm) cm.scrollTop = cm.scrollHeight;
+      }
     });
   }
   if (chatClose && chatDrawer) {
@@ -1177,6 +1182,8 @@ function initNavigation() {
     btnBiz.addEventListener('click', () => {
       sounds.playClick();
       renderBusinessCards();
+      const vEl = document.getElementById('vaultAmount');
+      if (vEl) vEl.textContent = STATE.businessVault.toLocaleString('ru-RU');
       bizModal.classList.add('open');
     });
   }
@@ -1633,6 +1640,9 @@ let currentPlinkoBuckets = [];
 let plinkoBalls = [];
 let plinkoPegs = [];
 let plinkoSparks = [];
+let plinkoPegCacheCanvas = null;
+let plinkoLoopActive = false;
+let plinkoRafId = null;
 
 function getBucketColor(mult) {
   if (mult >= 50) return '#ff0055';
@@ -1641,6 +1651,31 @@ function getBucketColor(mult) {
   if (mult >= 2) return '#eab308';
   if (mult >= 1) return '#22c55e';
   return '#06b6d4';
+}
+
+function buildPlinkoPegCache(width, height) {
+  if (typeof document === 'undefined') return null;
+  const cache = document.createElement('canvas');
+  cache.width = width;
+  cache.height = height;
+  const cctx = cache.getContext('2d');
+  if (!cctx) return null;
+
+  cctx.fillStyle = 'rgba(255, 255, 255, 0.18)';
+  plinkoPegs.forEach(peg => {
+    cctx.beginPath();
+    cctx.arc(peg.x, peg.y, peg.r + 2, 0, Math.PI * 2);
+    cctx.fill();
+  });
+
+  cctx.fillStyle = '#ffffff';
+  plinkoPegs.forEach(peg => {
+    cctx.beginPath();
+    cctx.arc(peg.x, peg.y, peg.r, 0, Math.PI * 2);
+    cctx.fill();
+  });
+
+  return cache;
 }
 
 function rebuildPlinkoBoard() {
@@ -1680,6 +1715,15 @@ function rebuildPlinkoBoard() {
         r: rows === 16 ? 3.2 : 4,
         glow: 0
       });
+    }
+  }
+
+  plinkoPegCacheCanvas = buildPlinkoPegCache(canvas.width, canvas.height);
+  if (!plinkoLoopActive) {
+    const ctx = canvas.getContext('2d');
+    if (ctx && plinkoPegCacheCanvas) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(plinkoPegCacheCanvas, 0, 0);
     }
   }
 }
@@ -1754,6 +1798,7 @@ function initPlinko() {
           hue: Math.floor(Math.random() * 60) + 330 // оттенки красно-розового
         });
         updatePlinkoBallsUI();
+        startPlinkoLoop();
       }, i * 180);
     }
   }
@@ -1770,46 +1815,80 @@ function initPlinko() {
     if (el) el.textContent = plinkoBalls.length;
   }
 
-  // Анимационный цикл Плинко с искрами
+  function startPlinkoLoop() {
+    if (plinkoLoopActive || (typeof document !== 'undefined' && document.hidden)) return;
+    plinkoLoopActive = true;
+    plinkoRafId = requestAnimationFrame(loopPlinko);
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      if (plinkoRafId !== null) {
+        cancelAnimationFrame(plinkoRafId);
+        plinkoRafId = null;
+      }
+      plinkoLoopActive = false;
+    } else if (plinkoBalls.length > 0 || plinkoSparks.length > 0) {
+      startPlinkoLoop();
+    }
+  });
+
+  // Анимационный цикл Плинко (по требованию, с кешем штырьков и без shadowBlur)
   function loopPlinko() {
+    if (document.hidden) {
+      plinkoLoopActive = false;
+      plinkoRafId = null;
+      return;
+    }
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Рисуем штырьки
-    plinkoPegs.forEach(peg => {
-      if (peg.glow > 0) {
-        ctx.fillStyle = '#00e5ff';
-        ctx.shadowColor = '#00e5ff';
-        ctx.shadowBlur = 10 * peg.glow;
-        peg.glow = Math.max(0, peg.glow - 0.05);
-      } else {
-        ctx.fillStyle = '#ffffff';
-        ctx.shadowColor = '#ffffff';
-        ctx.shadowBlur = 4;
-      }
-      ctx.beginPath();
-      ctx.arc(peg.x, peg.y, peg.r, 0, Math.PI * 2);
-      ctx.fill();
-    });
-    ctx.shadowBlur = 0;
+    if (plinkoPegCacheCanvas) {
+      ctx.drawImage(plinkoPegCacheCanvas, 0, 0);
+    }
 
-    // Рисуем и обновляем искры от столкновений
+    // Поверх кеша рисуем только подсвеченные штырьки
+    let hasGlow = false;
+    for (let p = 0; p < plinkoPegs.length; p++) {
+      const peg = plinkoPegs[p];
+      if (!plinkoPegCacheCanvas) {
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(peg.x, peg.y, peg.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      if (peg.glow > 0) {
+        hasGlow = true;
+        ctx.fillStyle = `rgba(0, 229, 255, ${(0.35 * peg.glow).toFixed(2)})`;
+        ctx.beginPath();
+        ctx.arc(peg.x, peg.y, peg.r + 4 * peg.glow, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#00e5ff';
+        ctx.beginPath();
+        ctx.arc(peg.x, peg.y, peg.r, 0, Math.PI * 2);
+        ctx.fill();
+        peg.glow = Math.max(0, peg.glow - 0.06);
+      }
+    }
+
+    // Искры от столкновений без shadowBlur
     for (let s = plinkoSparks.length - 1; s >= 0; s--) {
       const sp = plinkoSparks[s];
       sp.x += sp.vx;
       sp.y += sp.vy;
-      sp.life -= 0.04;
+      sp.life -= 0.05;
       if (sp.life <= 0) {
         plinkoSparks.splice(s, 1);
         continue;
       }
+      ctx.globalAlpha = sp.life;
       ctx.fillStyle = sp.color;
-      ctx.shadowColor = sp.color;
-      ctx.shadowBlur = 6;
       ctx.beginPath();
-      ctx.arc(sp.x, sp.y, 2 * sp.life, 0, Math.PI * 2);
+      ctx.arc(sp.x, sp.y, 2.2 * sp.life, 0, Math.PI * 2);
       ctx.fill();
-      ctx.shadowBlur = 0;
     }
+    ctx.globalAlpha = 1;
 
     // Физика шариков
     for (let i = plinkoBalls.length - 1; i >= 0; i--) {
@@ -1818,45 +1897,49 @@ function initPlinko() {
       b.x += b.vx;
       b.y += b.vy;
 
-      // Столкновение со штырьками
-      plinkoPegs.forEach(peg => {
+      // Столкновение со штырьками (квадрат расстояния вместо sqrt)
+      for (let p = 0; p < plinkoPegs.length; p++) {
+        const peg = plinkoPegs[p];
         const dx = b.x - peg.x;
         const dy = b.y - peg.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < b.r + peg.r) {
-          // Отскок
+        const minDist = b.r + peg.r;
+        if (dx * dx + dy * dy < minDist * minDist) {
           const angle = Math.atan2(dy, dx);
           b.vx = Math.cos(angle) * 2.7 + (Math.random() - 0.5) * 0.9;
           b.vy = Math.sin(angle) * 2.1;
           peg.glow = 1.0;
+          hasGlow = true;
           sounds.playPlinkoBounce(450 + Math.random() * 500);
 
-          // Спавн 3-4 мини-искр
-          for (let k = 0; k < 3; k++) {
-            plinkoSparks.push({
-              x: peg.x,
-              y: peg.y,
-              vx: (Math.random() - 0.5) * 3,
-              vy: (Math.random() - 0.5) * 3,
-              life: 1.0,
-              color: '#00e5ff'
-            });
+          if (plinkoSparks.length < 48) {
+            for (let k = 0; k < 2; k++) {
+              plinkoSparks.push({
+                x: peg.x,
+                y: peg.y,
+                vx: (Math.random() - 0.5) * 3,
+                vy: (Math.random() - 0.5) * 3,
+                life: 1.0,
+                color: '#00e5ff'
+              });
+            }
           }
         }
-      });
+      }
 
       // Стенки
       if (b.x < b.r) { b.x = b.r; b.vx *= -0.6; }
       if (b.x > canvas.width - b.r) { b.x = canvas.width - b.r; b.vx *= -0.6; }
 
-      // Рисуем светящийся шарик с неоновым шлейфом
+      // Светящийся шарик с мягким ореолом (без shadowBlur)
+      ctx.fillStyle = `hsla(${b.hue}, 95%, 55%, 0.28)`;
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.r + 3.5, 0, Math.PI * 2);
+      ctx.fill();
+
       ctx.fillStyle = `hsl(${b.hue}, 95%, 55%)`;
-      ctx.shadowColor = `hsl(${b.hue}, 95%, 55%)`;
-      ctx.shadowBlur = 12;
       ctx.beginPath();
       ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
       ctx.fill();
-      ctx.shadowBlur = 0;
 
       // Попадание в корзину
       if (b.y >= canvas.height - 14) {
@@ -1866,10 +1949,13 @@ function initPlinko() {
       }
     }
 
-    requestAnimationFrame(loopPlinko);
+    if (plinkoBalls.length > 0 || plinkoSparks.length > 0 || hasGlow) {
+      plinkoRafId = requestAnimationFrame(loopPlinko);
+    } else {
+      plinkoLoopActive = false;
+      plinkoRafId = null;
+    }
   }
-
-  loopPlinko();
 }
 
 function addPlinkoHistory(mult) {
@@ -2362,15 +2448,32 @@ function renderBusinessCards() {
 }
 
 function initBusinessTicker() {
-  // Начисление пассивного дохода каждую секунду
+  let bizPersistTick = 0;
+  const persistVault = () => {
+    localStorage.setItem('marar_biz_vault', STATE.businessVault.toString());
+  };
+
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) persistVault();
+    });
+  }
+  if (typeof window !== 'undefined') {
+    window.addEventListener('pagehide', persistVault);
+  }
+
+  // Начисление пассивного дохода каждую секунду (без лишней сериализации инвентаря)
   setInterval(() => {
     const income = calcTotalIncomePerSec();
     if (income > 0) {
       STATE.businessVault += income;
-      saveState();
+      bizPersistTick++;
+      if (bizPersistTick % 5 === 0) persistVault();
 
-      const vaultEl = document.getElementById('vaultAmount');
-      if (vaultEl) vaultEl.textContent = STATE.businessVault.toLocaleString('ru-RU');
+      if (document.getElementById('businessModal')?.classList.contains('open')) {
+        const vaultEl = document.getElementById('vaultAmount');
+        if (vaultEl) vaultEl.textContent = STATE.businessVault.toLocaleString('ru-RU');
+      }
     }
   }, 1000);
 
@@ -3007,7 +3110,8 @@ function startRouletteTimer() {
   if (STATE.roulette.timer) clearInterval(STATE.roulette.timer);
 
   STATE.roulette.timer = setInterval(() => {
-    if (STATE.roulette.isSpinning) return;
+    if (STATE.roulette.isSpinning || document.hidden) return;
+    if (!document.getElementById('subgame-roulette')?.classList.contains('active') || !document.getElementById('tab-games')?.classList.contains('active')) return;
     STATE.roulette.timeLeft -= 0.1;
 
     // Рандомные мелкие ставки ботов в процессе обратного отсчета
@@ -3398,13 +3502,13 @@ function runCrashFlight(ctx, canvas, renderCrewCallback) {
         crashFlames.splice(f, 1);
         continue;
       }
+      ctx.save();
+      ctx.globalAlpha = fl.life;
       ctx.fillStyle = fl.color;
-      ctx.shadowColor = fl.color;
-      ctx.shadowBlur = 8;
       ctx.beginPath();
-      ctx.arc(fl.x, fl.y, 3.5 * fl.life, 0, Math.PI * 2);
+      ctx.arc(fl.x, fl.y, 4 * fl.life, 0, Math.PI * 2);
       ctx.fill();
-      ctx.shadowBlur = 0;
+      ctx.restore();
     }
 
     // Траектория полета
@@ -3412,10 +3516,13 @@ function runCrashFlight(ctx, canvas, renderCrewCallback) {
     ctx.beginPath();
     ctx.moveTo(0, canvas.height - 20);
     ctx.quadraticCurveTo(progressX * 0.4, canvas.height - 20, progressX, progressY);
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = 'rgba(255, 32, 78, 0.25)';
+    ctx.lineWidth = 11;
+    ctx.stroke();
+
     ctx.strokeStyle = '#ff204e';
-    ctx.lineWidth = 5;
-    ctx.shadowColor = '#ff204e';
-    ctx.shadowBlur = 15;
+    ctx.lineWidth = 4.5;
     ctx.stroke();
 
     // Сама ракета
@@ -4153,9 +4260,10 @@ function initLiveChat() {
   BOT_MESSAGES.slice(0, 4).forEach(msg => appendChatMessage(msg.user, msg.badge, msg.text));
 
   setInterval(() => {
+    if (document.hidden) return;
     const rand = BOT_MESSAGES[Math.floor(Math.random() * BOT_MESSAGES.length)];
     appendChatMessage(rand.user, rand.badge, rand.text);
-  }, 5500);
+  }, 7500);
 
   form.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -4190,7 +4298,12 @@ function appendChatMessage(user, badge, text, isMe = false) {
   `;
 
   container.appendChild(msgEl);
-  container.scrollTop = container.scrollHeight;
+  while (container.children.length > 30) {
+    container.removeChild(container.firstChild);
+  }
+  if (document.getElementById('chatDrawer')?.classList.contains('open')) {
+    container.scrollTop = container.scrollHeight;
+  }
 }
 
 const PROMO_CODES = {
@@ -4395,7 +4508,11 @@ function initWheel() {
     requestAnimationFrame(animateWheel);
   });
 
-  setInterval(updateWheelTimerUI, 1000);
+  setInterval(() => {
+    if (document.hidden) return;
+    if (!document.getElementById('wheelModal')?.classList.contains('open')) return;
+    updateWheelTimerUI();
+  }, 1000);
 }
 
 function finishWheelSpin(sector) {
@@ -4512,11 +4629,12 @@ function initLiveTicker() {
   }
 
   setInterval(() => {
+    if (document.hidden) return;
     const randomUser = FAKE_USERS[Math.floor(Math.random() * FAKE_USERS.length)];
     const randomCase = CASES_DATA[Math.floor(Math.random() * CASES_DATA.length)];
     const randomItem = randomCase.items[Math.floor(Math.random() * randomCase.items.length)];
     addLiveDrop(randomUser, randomItem);
-  }, 4500);
+  }, 6500);
 }
 
 function addLiveDrop(user, item) {
@@ -4532,7 +4650,7 @@ function addLiveDrop(user, item) {
   `;
 
   track.insertBefore(itemEl, track.firstChild);
-  while (track.children.length > 12) {
+  while (track.children.length > 10) {
     track.removeChild(track.lastChild);
   }
 }
@@ -4739,13 +4857,19 @@ function drawSlotWinningLines(winningLines) {
       }
     });
 
-    ctx.strokeStyle = line.leadSym.color || '#ff204e';
-    ctx.lineWidth = 4;
+    const lineColor = line.leadSym.color || '#ff204e';
+    ctx.save();
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    ctx.shadowColor = line.leadSym.color || '#ff204e';
-    ctx.shadowBlur = 12;
+    ctx.strokeStyle = lineColor;
+    ctx.globalAlpha = 0.28;
+    ctx.lineWidth = 10;
     ctx.stroke();
+
+    ctx.globalAlpha = 1;
+    ctx.lineWidth = 4;
+    ctx.stroke();
+    ctx.restore();
   });
 }
 
