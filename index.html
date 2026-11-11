@@ -1,0 +1,1349 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>MARAR DROP 3.0 — Мега Шуточное Казино (Ультимативное Издание)</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,600;0,700;0,900;1,800&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Конфетти холст -->
+  <canvas id="confettiCanvas"></canvas>
+
+  <!-- Декоративные белые линии по бокам экрана -->
+  <div class="side-frame side-frame-left">
+    <div class="frame-line frame-line-main"></div>
+    <div class="frame-line frame-line-sub"></div>
+    <div class="frame-ticks">
+      <span></span><span></span><span></span><span></span><span></span>
+    </div>
+    <div class="frame-label">MARAR // DROP // 2026</div>
+  </div>
+
+  <div class="side-frame side-frame-right">
+    <div class="frame-line frame-line-main"></div>
+    <div class="frame-line frame-line-sub"></div>
+    <div class="frame-ticks">
+      <span></span><span></span><span></span><span></span><span></span>
+    </div>
+    <div class="frame-label">PARODY // CASINO // PROTO</div>
+  </div>
+
+  <!-- Верхняя полоса: Бегущая строка live-дропов -->
+  <div class="live-ticker-wrap">
+    <div class="ticker-badge">
+      <span class="pulse-dot"></span> LIVE ДРОП
+    </div>
+    <div class="ticker-track" id="liveTickerTrack">
+      <!-- Элементы генерируются динамически -->
+    </div>
+  </div>
+
+  <div class="app-container">
+    <!-- Шапка сайта -->
+    <header class="site-header">
+      <div class="logo-area" id="logoClick">
+        <div class="logo-icon">🔥</div>
+        <div class="logo-text">
+          <span class="logo-brand">MARAR</span>
+          <span class="logo-accent">DROP</span>
+        </div>
+        <div class="badge-parody">3.0 ULTIMATE</div>
+      </div>
+
+      <!-- Профиль игрока с уровнем и XP -->
+      <div class="profile-pill" id="btnOpenProfile" title="Открыть профиль игрока">
+        <div class="profile-avatar" id="headerAvatar">🐱</div>
+        <div class="profile-meta">
+          <div class="profile-name-line">
+            <span class="profile-name" id="headerPlayerName">Студент_Марара</span>
+            <span class="profile-lvl-badge" id="headerLvlBadge">LVL 1</span>
+          </div>
+          <div class="profile-xp-bar">
+            <div class="xp-fill" id="headerXpFill" style="width: 15%"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Панель управления и спец-кнопки -->
+      <div class="user-panel">
+        <div class="top-action-buttons">
+          <button class="btn-top-special" id="btnOpenBusiness" title="Пассивный доход">
+            🏪 Бизнес <span class="business-idle-badge" id="businessTopNotice">+0/с</span>
+          </button>
+          <button class="btn-top-special" id="btnOpenWheel" title="Колесо фортуны">
+            🎡 Колесо
+          </button>
+          <button class="btn-top-special" id="btnOpenPromo" title="Ввести промокод">
+            🎁 Промокод
+          </button>
+          <button class="btn-top-special btn-chat-toggle" id="btnToggleChat" title="Открыть чат">
+            💬 Чат <span class="online-indicator"></span>
+          </button>
+        </div>
+
+        <div class="sound-toggle-btn" id="soundToggle" title="Звуки вкл/выкл">
+          🔊
+        </div>
+        <div class="balance-card">
+          <div class="balance-label">Баланс:</div>
+          <div class="balance-amount">
+            <span id="userBalance">5 000</span> <span class="currency-symbol">MD</span>
+          </div>
+        </div>
+        <button class="btn btn-free-money" id="btnFreeMoney" title="Получить бесплатные монеты">
+          💸 Мама, дай денег!
+        </button>
+      </div>
+    </header>
+
+    <!-- Вкладки навигации по ВСЕМ режимам -->
+    <nav class="nav-tabs-wrapper">
+      <div class="nav-tabs">
+        <button class="nav-tab active" data-tab="cases"><span class="tab-icon">📦</span> Кейсы</button>
+        <button class="nav-tab" data-tab="games"><span class="tab-icon">🎮</span> Игровой Зал <span class="nav-hot-pill">7</span></button>
+        <button class="nav-tab" data-tab="upgrader"><span class="tab-icon">⚡</span> Апгрейдер 2.0</button>
+        <button class="nav-tab" data-tab="contracts"><span class="tab-icon">🧪</span> Контракты</button>
+        <button class="nav-tab" data-tab="inventory"><span class="tab-icon">🎒</span> Инвентарь <span class="inv-count-badge" id="invBadge">0</span></button>
+        <button class="nav-tab" data-tab="achievements"><span class="tab-icon">🏆</span> Ачивки</button>
+      </div>
+    </nav>
+
+    <!-- Главный баннер со сводкой -->
+    <div class="hero-banner">
+      <div class="hero-content">
+        <h1 class="hero-title">МАРАР ДРОП 3.0: <span>ВСЕЛЕННАЯ АЗАРТА БЕЗ РИСКА</span></h1>
+        <p class="hero-desc">
+          Теперь доступны Битвы Кейсов против ботов, Плинко с реалистичной физикой, Напёрстки, Котёл контрактов и собственный Шаурма-бизнес!
+        </p>
+      </div>
+      <div class="hero-stats">
+        <div class="stat-box">
+          <span class="stat-num" id="statOpened">0</span>
+          <span class="stat-name">Кейсов открыто</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-num" id="statJackpots">0</span>
+          <span class="stat-name">Джекпотов</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-num" id="statBattlesWon">0</span>
+          <span class="stat-name">Битв выиграно</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-num" id="statAchievementsCount">0/8</span>
+          <span class="stat-name">Ачивок</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ОСНОВНОЙ КОНТЕНТ (ВКЛАДКИ) -->
+    <main class="content-area">
+
+      <!-- ВКЛАДКА 1: КЕЙСЫ -->
+      <section id="tab-cases" class="tab-view active">
+        <div class="section-header">
+          <h2 class="section-title"><span class="title-decor"></span> ВЫБЕРИ СВОЙ КЕЙС</h2>
+          <span class="section-tag">Интерактивный 3D-эффект карточек и CS:GO деселерация</span>
+        </div>
+        <div class="cases-grid" id="casesGrid"></div>
+      </section>
+
+      <!-- ВКЛАДКА 2: ИГРОВОЙ ЗАЛ (ВСЕ 7 АЗАРТНЫХ ИГР В ОДНОМ МЕСТЕ) -->
+      <section id="tab-games" class="tab-view">
+        <div class="section-header">
+          <h2 class="section-title"><span class="title-decor"></span> ИГРОВОЙ ЗАЛ MARAR DROP</h2>
+          <span class="section-tag">7 культовых казино-режимов: Слоты с бонуской, Плинко, Рулетка, Краш, Сапёр и PvP Битвы</span>
+        </div>
+
+        <!-- Быстрая под-навигация по играм (без скролла) -->
+        <div class="games-subnav" id="gamesSubnav">
+          <button class="subgame-pill active" data-game="hub"><span class="pill-icon">🏠</span> Все игры</button>
+          <button class="subgame-pill" data-game="slot"><span class="pill-icon">🎰</span> Слот Bonanza</button>
+          <button class="subgame-pill" data-game="battles"><span class="pill-icon">⚔️</span> Битва кейсов</button>
+          <button class="subgame-pill" data-game="plinko"><span class="pill-icon">🟢</span> Плинко</button>
+          <button class="subgame-pill" data-game="roulette"><span class="pill-icon">🎲</span> Рулетка</button>
+          <button class="subgame-pill" data-game="crash"><span class="pill-icon">🚀</span> Краш</button>
+          <button class="subgame-pill" data-game="mines"><span class="pill-icon">💣</span> Сапёр</button>
+          <button class="subgame-pill" data-game="thimbles"><span class="pill-icon">🥤</span> Напёрстки</button>
+        </div>
+
+        <!-- 1. ЛОББИ ВСЕХ ИГР (GAMES HUB) -->
+        <div class="subgame-view active" id="subgame-hub">
+          <div class="games-hub-grid">
+            <!-- Карточка: Слот Bonanza -->
+            <div class="game-hub-card card-hot" data-game="slot">
+              <div class="game-card-badge badge-hot">🔥 ТОП / БОНУСКА</div>
+              <div class="game-card-icon">🎰</div>
+              <h3 class="game-card-title">MARAR BONANZA</h3>
+              <p class="game-card-desc">Классический видео-слот 5x3 с 20 линиями выплат, Wild, Scatter, покупкой бонуски за 100x и бомбами-множителями до x100!</p>
+              <div class="game-card-tags">
+                <span>⚡ 20 линий</span>
+                <span>💣 Бомбы x100</span>
+                <span>👑 Заносы</span>
+              </div>
+              <button class="btn btn-game-play">ИГРАТЬ СЕЙЧАС</button>
+            </div>
+
+            <!-- Карточка: Битва Кейсов -->
+            <div class="game-hub-card" data-game="battles">
+              <div class="game-card-badge badge-pvp">⚔️ PVP ДУЭЛЬ</div>
+              <div class="game-card-icon">⚔️</div>
+              <h3 class="game-card-title">БИТВА КЕЙСОВ</h3>
+              <p class="game-card-desc">Сразись с ботами в синхронной дуэли открытий кейсов: победитель забирает предметы обоих участников!</p>
+              <div class="game-card-tags">
+                <span>🤖 3 уровня ботов</span>
+                <span>📦 Все кейсы</span>
+                <span>🏆 All-in куш</span>
+              </div>
+              <button class="btn btn-game-play">В БОЙ</button>
+            </div>
+
+            <!-- Карточка: Плинко -->
+            <div class="game-hub-card" data-game="plinko">
+              <div class="game-card-badge badge-physics">⚡ ФИЗИКА</div>
+              <div class="game-card-icon">🟢</div>
+              <h3 class="game-card-title">ПЛИНКО (PLINKO)</h3>
+              <p class="game-card-desc">Запускай светящиеся шарики через поле препятствий в лунки с множителями от 0.2x до рекордных 50x!</p>
+              <div class="game-card-tags">
+                <span>🎯 Множители до x50</span>
+                <span>🎳 Авто-спуск</span>
+                <span>🟢 Реалистичный отскок</span>
+              </div>
+              <button class="btn btn-game-play">ИГРАТЬ</button>
+            </div>
+
+            <!-- Карточка: Рулетка -->
+            <div class="game-hub-card" data-game="roulette">
+              <div class="game-card-badge badge-hit">🎲 ХИТ</div>
+              <div class="game-card-icon">🎡</div>
+              <h3 class="game-card-title">КЛАССИК РУЛЕТКА</h3>
+              <p class="game-card-desc">Классическая горизонтальная CS-лента на 15 чисел: ставь на Красное (2x), Чёрное (2x) или лови легендарный Зелёный (14x)!</p>
+              <div class="game-card-tags">
+                <span>🔴 Красное 2x</span>
+                <span>⚫ Чёрное 2x</span>
+                <span>🟢 Зеро 14x</span>
+              </div>
+              <button class="btn btn-game-play">ИГРАТЬ</button>
+            </div>
+
+            <!-- Карточка: Краш -->
+            <div class="game-hub-card" data-game="crash">
+              <div class="game-card-badge badge-crash">📈 x100+</div>
+              <div class="game-card-icon">🚀</div>
+              <h3 class="game-card-title">КРАШ (CRASH)</h3>
+              <p class="game-card-desc">Ракета Марара взлетает, а коэффициент множителя растет в реальном времени. Успей нажать «Забрать» до взрыва!</p>
+              <div class="game-card-tags">
+                <span>⏱️ Динамический график</span>
+                <span>🛑 Авто-вывод</span>
+                <span>💥 Заносы</span>
+              </div>
+              <button class="btn btn-game-play">НА ВЗЛЁТ</button>
+            </div>
+
+            <!-- Карточка: Сапёр -->
+            <div class="game-hub-card" data-game="mines">
+              <div class="game-card-badge badge-tactics">💎 ТАКТИКА</div>
+              <div class="game-card-icon">💣</div>
+              <h3 class="game-card-title">САПЁР (MINES)</h3>
+              <p class="game-card-desc">Игровое поле 5x5: открывай ячейки с изумрудами, увеличивай коэффициент и вовремя забирай банк до первой мины!</p>
+              <div class="game-card-tags">
+                <span>💣 От 1 до 24 мин</span>
+                <span>💎 Кэшаут в любой момент</span>
+                <span>🧠 Стратегия</span>
+              </div>
+              <button class="btn btn-game-play">РАЗМИНИРОВАТЬ</button>
+            </div>
+
+            <!-- Карточка: Напёрстки -->
+            <div class="game-hub-card" data-game="thimbles">
+              <div class="game-card-badge badge-cup">🪙 x3 КУШ</div>
+              <div class="game-card-icon">🥤</div>
+              <h3 class="game-card-title">НАПЁРСТКИ</h3>
+              <p class="game-card-desc">Следи за ловкостью рук Марара! Три стаканчика перемешиваются на твоих глазах — угадай золотой шарик и получи утроение x3!</p>
+              <div class="game-card-tags">
+                <span>🥤 3 стакана</span>
+                <span>🪙 Мгновенный x3</span>
+                <span>👁️ Внимательность</span>
+              </div>
+              <button class="btn btn-game-play">СЫГРАТЬ</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. СЛОТ MARAR BONANZA -->
+        <div class="subgame-view" id="subgame-slot">
+          <div class="subgame-top-bar">
+            <button class="btn btn-subgame-back" data-back-to="hub">← В лобби всех игр</button>
+            <span class="subgame-crumb">ИГРОВОЙ ЗАЛ / <b>🎰 MARAR BONANZA (СЛОТ С БОНУСКОЙ)</b></span>
+          </div>
+
+        <div class="slot-container" id="slotContainer">
+          <!-- Верхняя полоса статуса слота / Бонусного раунда -->
+          <div class="slot-status-bar" id="slotStatusBar">
+            <div class="slot-logo-mini">
+              <span class="pulse-dot"></span> MARAR <span>BONANZA</span>
+            </div>
+
+            <!-- Баннер фриспинов (активен во время бонуски) -->
+            <div class="slot-fs-banner" id="slotFsBanner" style="display: none;">
+              <div class="fs-flame">🔥</div>
+              <div class="fs-text">
+                БОНУСНЫЙ РАУНД: СПИН <b id="slotFsCurrent">1</b> / <span id="slotFsTotal">10</span>
+              </div>
+              <div class="fs-accumulated">
+                ВЫИГРЫШ БОНУСКИ: <b id="slotFsTotalWin" class="gold-txt">0 MD</b>
+              </div>
+            </div>
+
+            <div class="slot-spin-mult-badge" id="slotSpinMultBadge" style="display: none;">
+              💣 МНОЖИТЕЛЬ: <b id="slotSpinMultVal">x1</b>
+            </div>
+          </div>
+
+          <!-- Основная игровая арена слота -->
+          <div class="slot-stage-grid">
+            <!-- Левая колонка: Покупка бонуски и правила -->
+            <div class="slot-tools-col">
+              <button class="btn btn-buy-bonus" id="btnBuyBonus">
+                <div class="buy-bonus-glow"></div>
+                <div class="buy-top-tag">ГАРАНТИЯ 3+ SCATTER</div>
+                <div class="buy-title">КУПИТЬ БОНУСКУ</div>
+                <div class="buy-sub">100x СТАВКИ</div>
+                <div class="buy-price-val" id="buyBonusPrice">10 000 MD</div>
+              </button>
+
+              <button class="btn btn-slot-subaction" id="btnOpenPaytable">
+                📖 Таблица выплат
+              </button>
+
+              <div class="slot-rules-mini">
+                <div class="rule-hdr">⚡ СИМВОЛЫ СЛОТА:</div>
+                <div class="rule-row"><span>⚡ 3+ Scatter:</span> <b>10 Фриспинов</b></div>
+                <div class="rule-row"><span>🃏 Wild:</span> <b>Заменяет любые</b></div>
+                <div class="rule-row"><span>💣 Бомба:</span> <b>Множитель до x100</b></div>
+                <div class="rule-row"><span>👑 Золотой Дошик:</span> <b>До 50x за 5</b></div>
+              </div>
+            </div>
+
+            <!-- Центральный блок барабанов -->
+            <div class="slot-reels-frame" id="slotReelsFrame">
+              <div class="slot-reels-window" id="slotReelsWindow">
+                <!-- 5 барабанов -->
+                <div class="slot-reel-col" id="slotReel0" data-col="0">
+                  <div class="reel-strip" id="reelStrip0"></div>
+                </div>
+                <div class="slot-reel-col" id="slotReel1" data-col="1">
+                  <div class="reel-strip" id="reelStrip1"></div>
+                </div>
+                <div class="slot-reel-col" id="slotReel2" data-col="2">
+                  <div class="reel-strip" id="reelStrip2"></div>
+                </div>
+                <div class="slot-reel-col" id="slotReel3" data-col="3">
+                  <div class="reel-strip" id="reelStrip3"></div>
+                </div>
+                <div class="slot-reel-col" id="slotReel4" data-col="4">
+                  <div class="reel-strip" id="reelStrip4"></div>
+                </div>
+
+                <!-- Холст линий выплат -->
+                <canvas id="slotLinesCanvas"></canvas>
+              </div>
+
+              <!-- Всплывающий баннер выигрыша по центру барабанов -->
+              <div class="slot-win-overlay" id="slotWinOverlay">
+                <div class="win-label" id="slotWinOverlayLabel">ВЫИГРЫШ!</div>
+                <div class="win-val" id="slotWinOverlayVal">+0 MD</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Нижняя панель управления -->
+          <div class="slot-bottom-dashboard">
+            <div class="slot-bet-block">
+              <label>Ставка на спин:</label>
+              <div class="bet-input-wrap">
+                <input type="number" id="slotBetInput" value="100" min="10" step="10" class="bet-input">
+                <button class="btn-preset slot-preset" data-mult="0.5">1/2</button>
+                <button class="btn-preset slot-preset" data-mult="2">2x</button>
+                <button class="btn-preset slot-preset" data-val="100">+100</button>
+                <button class="btn-preset slot-preset" data-mult="max">MAX</button>
+              </div>
+            </div>
+
+            <div class="slot-win-display-box">
+              <span class="win-display-label">ВЫИГРЫШ СПИНА:</span>
+              <span class="win-display-amount" id="slotLastWinDisplay">0 MD</span>
+            </div>
+
+            <div class="slot-spins-actions">
+              <button class="btn btn-slot-toggle" id="btnSlotTurbo">
+                ⚡ ТУРБО: <b id="turboStatus">ВЫКЛ</b>
+              </button>
+              <button class="btn btn-slot-toggle" id="btnSlotAuto">
+                🔄 АВТО: <b id="autoStatus">ВЫКЛ</b>
+              </button>
+              <button class="btn btn-slot-spin-main" id="btnSlotSpin">
+                <span class="spin-fire">🔥</span>
+                <span class="spin-lbl">КРУТИТЬ</span>
+                <span class="spin-space">[SPACE]</span>
+              </button>
+            </div>
+          </div>
+        </div>
+        </div>
+
+        <!-- 3. БИТВА КЕЙСОВ -->
+        <div class="subgame-view" id="subgame-battles">
+          <div class="subgame-top-bar">
+            <button class="btn btn-subgame-back" data-back-to="hub">← В лобби всех игр</button>
+            <span class="subgame-crumb">ИГРОВОЙ ЗАЛ / <b>⚔️ БИТВА КЕЙСОВ</b></span>
+          </div>
+
+        <div class="battle-arena-container">
+          <!-- Верхняя панель выбора битвы -->
+          <div class="battle-setup-bar">
+            <div class="setup-group">
+              <label>Выбери кейс для дуэли:</label>
+              <select id="battleCaseSelect" class="battle-select">
+                <!-- Опции заполняются из JS -->
+              </select>
+            </div>
+            <div class="setup-group">
+              <label>Твой соперник (Бот):</label>
+              <select id="battleBotSelect" class="battle-select">
+                <option value="dimon">🤖 Димон_2007 (Любитель Дошика)</option>
+                <option value="batya" selected>🚗 Батя на Девятке (Опасный)</option>
+                <option value="shlepa">🐱 Кот Шлёпа (Легендарный)</option>
+              </select>
+            </div>
+            <div class="setup-group">
+              <label>Формат серии:</label>
+              <select id="battleRoundsSelect" class="battle-select">
+                <option value="1" selected>1 Раунд (Быстрая дуэль)</option>
+                <option value="3">3 Раунда (Серия Bo3)</option>
+                <option value="5">5 Раундов (Турнир Bo5)</option>
+              </select>
+            </div>
+            <div class="setup-toggles">
+              <button class="btn-battle-mode" id="btnBattleCrazyToggle" title="В режиме Безумия побеждает тот, у кого суммарный дроп ДЕШЕВЛЕ!">
+                🤪 Безумие: <span id="battleCrazyStatus">ВЫКЛ</span>
+              </button>
+              <button class="btn-battle-mode" id="btnBattleFastToggle" title="Мгновенный показ результатов без долгой прокрутки">
+                ⚡ Турбо: <span id="battleFastStatus">ВЫКЛ</span>
+              </button>
+            </div>
+            <button class="btn btn-primary-glow btn-start-battle" id="btnStartBattle">
+              ⚔️ НАЧАТЬ БИТВУ
+            </button>
+          </div>
+
+          <!-- Индикатор прогресса серии / текущего раунда -->
+          <div class="battle-scoreboard-strip" id="battleScoreboardStrip">
+            <div class="series-badge" id="battleRoundCounter">Раунд 1 из 1</div>
+            <div class="series-score" id="battleSeriesScore">Ты 0 : 0 Соперник</div>
+            <div class="series-mode-badge" id="battleCurrentModeTag">Обычный режим (побеждает наибольшая стоимость)</div>
+          </div>
+
+          <!-- Дуэльная арена с двумя лентами прокрутки -->
+          <div class="battle-arena-stage">
+            <!-- Сторона игрока -->
+            <div class="battle-fighter-column" id="battlePlayerSide">
+              <div class="fighter-header">
+                <div class="fighter-avatar" id="battlePlayerAvatar">🐱</div>
+                <div class="fighter-info">
+                  <div class="fighter-name" id="battlePlayerName">Ты</div>
+                  <div class="fighter-score" id="battlePlayerScore">0 MD</div>
+                </div>
+              </div>
+              <div class="battle-tape-box">
+                <div class="case-center-line"></div>
+                <div class="case-strip" id="battlePlayerStrip"></div>
+              </div>
+              <div class="battle-drop-result" id="battlePlayerDrop">
+                <span class="waiting-txt">Ожидание старта...</span>
+              </div>
+              <div class="battle-history-drops" id="battlePlayerHistory"></div>
+            </div>
+
+            <!-- Разделитель VS -->
+            <div class="battle-vs-divider">
+              <div class="vs-badge">VS</div>
+              <div class="battle-pot-preview" id="battlePotPreview">Банк: 0 MD</div>
+            </div>
+
+            <!-- Сторона бота -->
+            <div class="battle-fighter-column" id="battleBotSide">
+              <div class="fighter-header">
+                <div class="fighter-avatar" id="battleBotAvatar">🚗</div>
+                <div class="fighter-info">
+                  <div class="fighter-name" id="battleBotName">Батя на Девятке</div>
+                  <div class="fighter-score" id="battleBotScore">0 MD</div>
+                </div>
+              </div>
+              <div class="battle-tape-box">
+                <div class="case-center-line"></div>
+                <div class="case-strip" id="battleBotStrip"></div>
+              </div>
+              <div class="battle-drop-result" id="battleBotDrop">
+                <span class="waiting-txt">Ожидание старта...</span>
+              </div>
+              <div class="battle-history-drops" id="battleBotHistory"></div>
+            </div>
+          </div>
+
+          <!-- Итоговый баннер победителя битвы -->
+          <div class="battle-verdict-banner" id="battleVerdictBanner">
+            <h3 id="battleVerdictTitle">⚔️ ИТОГИ БИТВЫ</h3>
+            <p id="battleVerdictDesc">Выбери кейс, формат серии и нажми кнопку старта!</p>
+          </div>
+        </div>
+        </div>
+
+        <!-- 4. ПЛИНКО -->
+        <div class="subgame-view" id="subgame-plinko">
+          <div class="subgame-top-bar">
+            <button class="btn btn-subgame-back" data-back-to="hub">← В лобби всех игр</button>
+            <span class="subgame-crumb">ИГРОВОЙ ЗАЛ / <b>🟢 ПЛИНКО (PLINKO)</b></span>
+          </div>
+
+        <div class="plinko-container">
+          <div class="plinko-sidebar">
+            <div class="plinko-input-group">
+              <label>Сумма ставки на шарик (MD):</label>
+              <input type="number" id="plinkoBetInput" value="100" min="10" step="50" class="bet-input">
+            </div>
+
+            <div class="plinko-presets-row">
+              <button class="btn-preset plinko-preset" data-mult="0.5">1/2</button>
+              <button class="btn-preset plinko-preset" data-mult="2">x2</button>
+              <button class="btn-preset plinko-preset" data-val="100">+100</button>
+              <button class="btn-preset plinko-preset" data-mult="max">MAX</button>
+            </div>
+
+            <!-- Выбор риска -->
+            <div class="plinko-options-group">
+              <label>Уровень риска:</label>
+              <div class="plinko-pill-group" id="plinkoRiskGroup">
+                <button class="btn-plinko-pill" data-risk="low">Низкий</button>
+                <button class="btn-plinko-pill active" data-risk="medium">Средний</button>
+                <button class="btn-plinko-pill" data-risk="high">Высокий (до x110)</button>
+              </div>
+            </div>
+
+            <!-- Выбор рядов -->
+            <div class="plinko-options-group">
+              <label>Количество рядов пинов:</label>
+              <div class="plinko-pill-group" id="plinkoRowsGroup">
+                <button class="btn-plinko-pill" data-rows="8">8 рядов</button>
+                <button class="btn-plinko-pill active" data-rows="12">12 рядов</button>
+                <button class="btn-plinko-pill" data-rows="16">16 рядов</button>
+              </div>
+            </div>
+
+            <!-- Кнопки сброса -->
+            <div class="plinko-drop-actions">
+              <button class="btn btn-primary-glow btn-drop-plinko" id="btnDropPlinko">
+                🟢 БРОСИТЬ 1 ШАР
+              </button>
+              <div class="plinko-multi-drops">
+                <button class="btn btn-plinko-multi" id="btnDropPlinko5">⚡ Залп (5 шаров)</button>
+                <button class="btn btn-plinko-multi" id="btnDropPlinko10">🌧️ Ливень (10 шаров)</button>
+              </div>
+            </div>
+
+            <div class="plinko-stats-mini">
+              <div class="pstat-item">
+                <span>Последний коэффициент:</span>
+                <b id="plinkoLastMult">-</b>
+              </div>
+              <div class="pstat-item">
+                <span>Выигрыш:</span>
+                <b id="plinkoLastWin" class="gold-txt">0 MD</b>
+              </div>
+              <div class="pstat-item">
+                <span>Шаров в полёте:</span>
+                <b id="plinkoActiveBalls">0</b>
+              </div>
+            </div>
+          </div>
+
+          <div class="plinko-board-area">
+            <div class="plinko-history-strip">
+              <span class="p-hist-label">История множителей:</span>
+              <div class="plinko-history-list" id="plinkoHistoryList">
+                <span class="p-hist-chip mult-mid">x1.5</span>
+                <span class="p-hist-chip mult-low">x0.6</span>
+                <span class="p-hist-chip mult-high">x11.0</span>
+              </div>
+            </div>
+            <canvas id="plinkoCanvas" width="560" height="480"></canvas>
+            <div class="plinko-buckets" id="plinkoBuckets">
+              <!-- Корзины с множителями генерируются динамически по выбранным рядам/риску -->
+            </div>
+          </div>
+        </div>
+        </div>
+
+        <!-- 5. РУЛЕТКА -->
+        <div class="subgame-view" id="subgame-roulette">
+          <div class="subgame-top-bar">
+            <button class="btn btn-subgame-back" data-back-to="hub">← В лобби всех игр</button>
+            <span class="subgame-crumb">ИГРОВОЙ ЗАЛ / <b>🎲 КЛАССИК РУЛЕТКА</b></span>
+          </div>
+
+        <div class="roulette-board">
+          <div class="history-bar">
+            <span class="history-title">История:</span>
+            <div class="history-chips" id="rouletteHistory"></div>
+          </div>
+
+          <div class="roulette-tape-wrapper">
+            <div class="roulette-pointer"></div>
+            <div class="roulette-tape" id="rouletteTape"></div>
+          </div>
+
+          <div class="roulette-status-panel">
+            <div class="status-msg" id="rouletteStatusMsg">Сделайте ваши ставки!</div>
+            <div class="round-timer-bar">
+              <div class="timer-fill" id="timerFill"></div>
+            </div>
+            <button class="btn btn-spin-now" id="btnSpinNow">⚡ Крутить прямо сейчас!</button>
+          </div>
+
+          <div class="betting-controls">
+            <div class="bet-presets">
+              <span class="presets-label">Сумма ставки:</span>
+              <input type="number" id="betAmountInput" value="100" min="10" step="10" class="bet-input">
+              <button class="btn-preset" data-mult="0.5">1/2</button>
+              <button class="btn-preset" data-mult="2">x2</button>
+              <button class="btn-preset" data-mult="max">MAX</button>
+              <button class="btn-preset" data-val="100">+100</button>
+              <button class="btn-preset" data-val="500">+500</button>
+              <button class="btn-preset btn-action-clear" id="btnRouletteClear">🗑️ Сброс</button>
+              <button class="btn-preset btn-action-double" id="btnRouletteDouble">⚡ Удвоить всё</button>
+            </div>
+
+            <!-- Процентная статистика последних 100 раундов -->
+            <div class="roulette-stats-bar" id="rouletteStatsBar">
+              <div class="rstat-col rstat-red">
+                <span>🔴 Красное: <b id="statRedPct">47%</b></span>
+              </div>
+              <div class="rstat-col rstat-green">
+                <span>🟢 Марар (0): <b id="statGreenPct">6%</b></span>
+              </div>
+              <div class="rstat-col rstat-black">
+                <span>⚫ Черное: <b id="statBlackPct">47%</b></span>
+              </div>
+            </div>
+
+            <div class="bet-color-buttons">
+              <button class="bet-btn bet-red" data-color="red">
+                <span class="bet-badge">x2</span>
+                <span class="bet-name">КРАСНОЕ</span>
+                <span class="bet-numbers">1 — 7</span>
+                <span class="my-bet-val" id="myBetRed">0 MD</span>
+                <span class="bot-pool-val" id="botPoolRed">Общий пул: 0 MD</span>
+              </button>
+
+              <button class="bet-btn bet-green" data-color="green">
+                <span class="bet-badge">x14</span>
+                <span class="bet-name">МАРАР</span>
+                <span class="bet-numbers">0 (ДЖЕКПОТ)</span>
+                <span class="my-bet-val" id="myBetGreen">0 MD</span>
+                <span class="bot-pool-val" id="botPoolGreen">Общий пул: 0 MD</span>
+              </button>
+
+              <button class="bet-btn bet-black" data-color="black">
+                <span class="bet-badge">x2</span>
+                <span class="bet-name">ЧЕРНОЕ</span>
+                <span class="bet-numbers">8 — 14</span>
+                <span class="my-bet-val" id="myBetBlack">0 MD</span>
+                <span class="bot-pool-val" id="botPoolBlack">Общий пул: 0 MD</span>
+              </button>
+            </div>
+          </div>
+        </div>
+        </div>
+
+        <!-- 6. КРАШ -->
+        <div class="subgame-view" id="subgame-crash">
+          <div class="subgame-top-bar">
+            <button class="btn btn-subgame-back" data-back-to="hub">← В лобби всех игр</button>
+            <span class="subgame-crumb">ИГРОВОЙ ЗАЛ / <b>🚀 КРАШ-РАКЕТА</b></span>
+          </div>
+
+        <div class="crash-container">
+          <div class="crash-screen">
+            <canvas id="crashCanvas"></canvas>
+            <div class="crash-overlay-content">
+              <div class="crash-mult-display" id="crashMultiplier">1.00x</div>
+              <div class="crash-status-sub" id="crashStatusSub">Готовим двигатели...</div>
+            </div>
+            <!-- Плашка автовывода в углу экрана -->
+            <div class="crash-target-pill" id="crashTargetPill">
+              Авто-стоп: <b id="crashTargetVal">ВЫКЛ</b>
+            </div>
+          </div>
+
+          <div class="crash-controls">
+            <div class="crash-history-bar">
+              <span class="crash-hist-label">История крашей:</span>
+              <div class="crash-chips" id="crashHistory"></div>
+            </div>
+
+            <div class="crash-bet-box">
+              <div class="crash-inputs-grid">
+                <div class="crash-input-group">
+                  <label>Ставка на полет (MD):</label>
+                  <input type="number" id="crashBetInput" value="150" min="10" step="50" class="bet-input">
+                  <div class="crash-presets-row">
+                    <button class="btn-preset crash-preset" data-mult="0.5">1/2</button>
+                    <button class="btn-preset crash-preset" data-mult="2">x2</button>
+                    <button class="btn-preset crash-preset" data-val="100">+100</button>
+                    <button class="btn-preset crash-preset" data-mult="max">MAX</button>
+                  </div>
+                </div>
+
+                <div class="crash-input-group">
+                  <label>Авто-вывод (коэффициент):</label>
+                  <input type="number" id="crashAutoCashout" value="2.00" min="1.05" max="1000" step="0.10" class="bet-input" placeholder="Напр. 2.00">
+                  <div class="crash-presets-row">
+                    <button class="btn-preset crash-auto-btn" data-val="1.50">1.5x</button>
+                    <button class="btn-preset crash-auto-btn" data-val="2.00">2.0x</button>
+                    <button class="btn-preset crash-auto-btn" data-val="5.00">5.0x</button>
+                    <button class="btn-preset crash-auto-btn" data-val="off">Выкл</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="crash-action-buttons">
+                <button class="btn btn-crash-start" id="btnCrashStart">🚀 СТАРТ ПОЛЕТА</button>
+                <button class="btn btn-crash-cashout" id="btnCrashCashout" disabled>
+                  💰 ЗАБРАТЬ (<span id="crashCurrentProfit">0</span> MD)
+                </button>
+              </div>
+
+              <!-- Живой список участников в раунде -->
+              <div class="crash-live-players-box">
+                <div class="crash-players-header">
+                  <span>Экипаж ракеты (онлайн):</span>
+                  <span id="crashPlayersCount">4 участника</span>
+                </div>
+                <div class="crash-players-list" id="crashPlayersList">
+                  <!-- Заполняется динамически -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        </div>
+
+        <!-- 7. САПЁР (MINES) -->
+        <div class="subgame-view" id="subgame-mines">
+          <div class="subgame-top-bar">
+            <button class="btn btn-subgame-back" data-back-to="hub">← В лобби всех игр</button>
+            <span class="subgame-crumb">ИГРОВОЙ ЗАЛ / <b>💣 САПЁР (MINES 5x5)</b></span>
+          </div>
+
+        <div class="mines-container">
+          <div class="mines-settings-panel">
+            <div class="mines-control-group">
+              <label>Сумма ставки (MD):</label>
+              <input type="number" id="minesBetInput" value="100" min="10" step="10" class="bet-input">
+              <div class="mines-presets-row">
+                <button class="btn-preset mines-preset" data-mult="0.5">1/2</button>
+                <button class="btn-preset mines-preset" data-mult="2">x2</button>
+                <button class="btn-preset mines-preset" data-val="100">+100</button>
+                <button class="btn-preset mines-preset" data-mult="max">MAX</button>
+              </div>
+            </div>
+
+            <div class="mines-control-group">
+              <label>Количество мин на поле:</label>
+              <select id="minesCountSelect" class="mines-select">
+                <option value="1">1 мина (Легко, x1.03+)</option>
+                <option value="3" selected>3 мины (Стандарт, x1.12+)</option>
+                <option value="5">5 мин (Опасно, x1.25+)</option>
+                <option value="10">10 мин (Хардкор, x1.75+)</option>
+                <option value="20">20 мин (Марар-Камикадзе, x5.0+)</option>
+              </select>
+            </div>
+
+            <div class="mines-multiplier-info">
+              <div class="info-row">
+                <span>Текущий множитель:</span>
+                <span class="highlight-mult" id="minesCurrentMult">1.00x</span>
+              </div>
+              <div class="info-row">
+                <span>Следующий алмаз:</span>
+                <span class="highlight-next" id="minesNextMult">x1.12 (+12 MD)</span>
+              </div>
+              <div class="info-row">
+                <span>Возможный выигрыш:</span>
+                <span class="highlight-win" id="minesPotentialWin">0 MD</span>
+              </div>
+              <div class="info-row mines-counts-row">
+                <span>Алмазов: <b id="minesGemsLeft">22</b></span>
+                <span>Мин: <b id="minesBombsLeft" class="red-txt">3</b></span>
+              </div>
+            </div>
+
+            <div class="mines-action-stack">
+              <button class="btn btn-mines-start" id="btnMinesStart">💣 НАЧАТЬ ИГРУ</button>
+              <button class="btn btn-mines-random" id="btnMinesRandom" disabled>🎲 Случайный выбор</button>
+              <button class="btn btn-mines-cashout" id="btnMinesCashout" disabled>💰 ЗАБРАТЬ ВЫИГРЫШ</button>
+            </div>
+          </div>
+
+          <div class="mines-field-panel">
+            <div class="mines-grid" id="minesGrid"></div>
+          </div>
+        </div>
+        </div>
+
+        <!-- 8. НАПЁРСТКИ -->
+        <div class="subgame-view" id="subgame-thimbles">
+          <div class="subgame-top-bar">
+            <button class="btn btn-subgame-back" data-back-to="hub">← В лобби всех игр</button>
+            <span class="subgame-crumb">ИГРОВОЙ ЗАЛ / <b>🥤 НАПЁРСТКИ МАРАРА</b></span>
+          </div>
+
+        <div class="thimbles-container">
+          <div class="thimbles-modes-bar">
+            <span class="t-mode-label">Режим игры:</span>
+            <button class="btn-thimbles-mode active" id="btnThimble1Ball" data-balls="1">
+              🟢 1 Шарик (Коэф x2.90, Шанс 33%)
+            </button>
+            <button class="btn-thimbles-mode" id="btnThimble2Balls" data-balls="2">
+              🟢🟢 2 Шарика (Коэф x1.45, Шанс 67%)
+            </button>
+            <div class="thimbles-streak-badge" id="thimblesStreakBadge">
+              🔥 Серия побед: <b id="thimblesStreak">0</b>
+            </div>
+          </div>
+
+          <div class="thimbles-stage" id="thimblesStage">
+            <!-- 3 наперстка -->
+            <div class="thimble-wrap" data-index="0" id="thimble0">
+              <div class="thimble-cup">🥤</div>
+              <div class="thimble-item" id="thimblePrize0">🥣</div>
+            </div>
+            <div class="thimble-wrap" data-index="1" id="thimble1">
+              <div class="thimble-cup">🥤</div>
+              <div class="thimble-item" id="thimblePrize1">🥣</div>
+            </div>
+            <div class="thimble-wrap" data-index="2" id="thimble2">
+              <div class="thimble-cup">🥤</div>
+              <div class="thimble-item" id="thimblePrize2">🥣</div>
+            </div>
+          </div>
+
+          <div class="thimbles-controls">
+            <div class="thimbles-bet-panel">
+              <div class="thimbles-input-box">
+                <label>Сумма ставки (MD):</label>
+                <input type="number" id="thimblesBetInput" value="100" min="10" step="50" class="bet-input">
+                <div class="thimbles-presets">
+                  <button class="btn-preset thimbles-preset" data-mult="0.5">1/2</button>
+                  <button class="btn-preset thimbles-preset" data-mult="2">x2</button>
+                  <button class="btn-preset thimbles-preset" data-val="100">+100</button>
+                  <button class="btn-preset thimbles-preset" data-mult="max">MAX</button>
+                </div>
+              </div>
+              <button class="btn btn-primary-glow btn-thimbles-action" id="btnStartThimbles">🎲 ПЕРЕМЕШАТЬ</button>
+            </div>
+            <div class="thimbles-hint" id="thimblesStatusHint">
+              Выбери режим (1 или 2 шарика), ставку и нажми «Перемешать», затем укажи на стаканчик!
+            </div>
+          </div>
+        </div>
+        </div>
+      </section>
+
+      <!-- ВКЛАДКА 3: АПГРЕЙДЕР 2.0 (UPGRADER) -->
+      <section id="tab-upgrader" class="tab-view">
+        <div class="section-header">
+          <h2 class="section-title"><span class="title-decor"></span> АПГРЕЙДЕР 2.0</h2>
+          <span class="section-tag">Прокачивай скины из инвентаря или ставь монеты MD с выбором стороны сектора и быстрых множителей до 50x!</span>
+        </div>
+
+        <!-- Переключатель режима: Инвентарь или Баланс -->
+        <div class="upgrader-mode-tabs">
+          <button class="btn-upg-mode active" id="btnUpgModeInv" data-mode="inventory">🎒 Апгрейд из инвентаря</button>
+          <button class="btn-upg-mode" id="btnUpgModeBal" data-mode="balance">💰 Апгрейд на монеты MD</button>
+        </div>
+
+        <!-- Быстрые множители апгрейда -->
+        <div class="upgrader-multipliers-bar">
+          <span class="mult-bar-label">⚡ БЫСТРЫЙ МНОЖИТЕЛЬ:</span>
+          <button class="btn-upg-mult" data-mult="1.5">1.5x (~64%)</button>
+          <button class="btn-upg-mult" data-mult="2">2x (~48%)</button>
+          <button class="btn-upg-mult" data-mult="5">5x (~19%)</button>
+          <button class="btn-upg-mult" data-mult="10">10x (~9.5%)</button>
+          <button class="btn-upg-mult" data-mult="20">20x (~4.8%)</button>
+          <button class="btn-upg-mult" data-mult="50">50x (~1.9%)</button>
+        </div>
+
+        <div class="upgrader-container">
+          <!-- Левая колонка: Твой предмет (жертва) / Ставка -->
+          <div class="upgrader-card-pick">
+            <div class="pick-header">
+              <h3 id="upgSourceTitle">1. Твой предмет (жертва):</h3>
+              <button class="btn-choose-source" id="btnChooseSourceInv">🎒 Выбрать скин</button>
+            </div>
+            
+            <div class="picked-item-slot" id="upgradeSlotSource">
+              <span class="empty-slot-msg">Выбери предмет из инвентаря</span>
+            </div>
+
+            <!-- Блок ввода баланса (для режима MD) -->
+            <div class="upg-balance-input-wrap" id="upgBalanceInputWrap" style="display: none;">
+              <label>Сумма ставки для апгрейда (MD):</label>
+              <div class="bet-input-wrap">
+                <input type="number" id="upgBalanceBet" value="250" min="10" step="50" class="bet-input">
+                <button class="btn-preset upg-preset" data-val="100">+100</button>
+                <button class="btn-preset upg-preset" data-val="500">+500</button>
+                <button class="btn-preset upg-preset" data-mult="2">2x</button>
+                <button class="btn-preset upg-preset" data-mult="max">MAX</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Центральный радар -->
+          <div class="upgrader-radar-box">
+            <div class="radar-visual" id="radarVisual">
+              <div class="radar-shockwave" id="radarShockwave"></div>
+              <svg class="radar-svg" viewBox="0 0 200 200" id="radarSvg">
+                <circle cx="100" cy="100" r="85" class="radar-circle-bg" />
+                <circle cx="100" cy="100" r="85" class="radar-circle-win" id="radarWinSector" />
+              </svg>
+              <div class="radar-needle" id="radarNeedle"></div>
+              <div class="radar-center-text">
+                <span class="radar-chance-val" id="upgradeChanceVal">0%</span>
+                <span class="radar-chance-lbl">ШАНС ПОБЕДЫ</span>
+                <span class="radar-mult-hint" id="upgradeMultHint">x0.0</span>
+              </div>
+            </div>
+
+            <!-- Переключатель сектора: Лево / Право -->
+            <button class="btn-side-toggle" id="btnUpgradeSide">
+              Сектор победы: <b id="upgradeSideLabel">СЛЕВА (0° - Win)</b>
+            </button>
+
+            <button class="btn btn-upgrade-start" id="btnStartUpgrade" disabled>⚡ АПГРЕЙДИТЬ</button>
+          </div>
+
+          <!-- Правая колонка: Желаемый предмет -->
+          <div class="upgrader-card-pick">
+            <div class="pick-header">
+              <h3>2. Желаемый предмет:</h3>
+              <span class="target-pick-sub" id="targetPriceDiff"></span>
+            </div>
+            <div class="picked-item-slot" id="upgradeSlotTarget">
+              <span class="empty-slot-msg">Выбери целевой предмет из каталога</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Каталог предметов для апгрейда -->
+        <div class="upgrader-catalog-wrap">
+          <div class="catalog-filters-bar">
+            <h4>Каталог для апгрейда (кликни, чтобы выбрать цель):</h4>
+            <div class="catalog-search-wrap">
+              <input type="text" id="upgSearchInput" placeholder="🔍 Поиск предмета..." class="catalog-search-input">
+            </div>
+            <div class="catalog-rarity-pills" id="upgRarityFilter">
+              <button class="rarity-pill active" data-rarity="all">Все</button>
+              <button class="rarity-pill" data-rarity="common">Ширпотреб</button>
+              <button class="rarity-pill" data-rarity="uncommon">Армейское</button>
+              <button class="rarity-pill" data-rarity="rare">Засекреченное</button>
+              <button class="rarity-pill" data-rarity="classified">Тайное</button>
+              <button class="rarity-pill" data-rarity="covert">Элитное</button>
+              <button class="rarity-pill" data-rarity="legendary">Легендарное</button>
+              <button class="rarity-pill" data-rarity="exotic">Экзотика</button>
+            </div>
+          </div>
+          <div class="upgrader-target-catalog" id="upgraderTargetCatalog"></div>
+        </div>
+      </section>
+
+      <!-- ВКЛАДКА 9: КОНТРАКТЫ ОБМЕНА (TRADE-UP CAULDRON) -->
+      <section id="tab-contracts" class="tab-view">
+        <div class="section-header">
+          <h2 class="section-title"><span class="title-decor"></span> КОНТРАКТЫ ОБМЕНА (КОТЁЛ МАРАРА)</h2>
+          <span class="section-tag">Свари от 3 до 10 предметов в котле и получи артефакт более высокого уровня!</span>
+        </div>
+
+        <div class="contracts-container">
+          <div class="cauldron-card">
+            <div class="cauldron-visual" id="cauldronVisual">
+              <div class="cauldron-bubbles" id="cauldronBubbles">
+                <span></span><span></span><span></span><span></span>
+              </div>
+              <div class="cauldron-pot">🫕</div>
+              <div class="cauldron-magic-glow" id="cauldronGlow"></div>
+            </div>
+            <div class="cauldron-info">
+              <h3>Выбрано предметов: <span id="contractCountText">0/10</span></h3>
+              <p>Общая ценность загрузки: <b id="contractTotalVal">0 MD</b></p>
+              <div class="contract-reward-forecast" id="contractRewardForecast">
+                <span>Ожидаемый профит:</span>
+                <b id="contractRewardPreview">от 0 до 0 MD</b>
+              </div>
+              <div class="cauldron-btn-row">
+                <button class="btn btn-primary-glow btn-forge-contract" id="btnForgeContract" disabled>
+                  🧪 СВАРИТЬ КОНТРАКТ
+                </button>
+                <button class="btn btn-cauldron-action" id="btnContractAutoFill" title="Автоматически выбрать 10 самых дешевых предметов">
+                  ⚡ Авто (10 шт)
+                </button>
+                <button class="btn btn-cauldron-action" id="btnContractClear" title="Очистить выбранные предметы">
+                  🗑️ Очистить
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="contracts-inventory-picker">
+            <div class="picker-header-row">
+              <h4>Выбери предметы из инвентаря для переплавки:</h4>
+              <span class="picker-hint">Кликай по карточкам (минимум 3, максимум 10)</span>
+            </div>
+            <div class="contract-picker-grid" id="contractPickerGrid">
+              <!-- Сюда подтягиваются предметы для выбора -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ВКЛАДКА 10: ИНВЕНТАРЬ -->
+      <section id="tab-inventory" class="tab-view">
+        <div class="section-header inventory-header">
+          <div>
+            <h2 class="section-title"><span class="title-decor"></span> ТВОЙ ИНВЕНТАРЬ</h2>
+            <span class="section-tag">Твои выигранные реликвии и шедевры</span>
+          </div>
+          <div class="inv-actions">
+            <button class="btn btn-sell-all" id="btnSellAll">💰 Продать все предметы</button>
+          </div>
+        </div>
+        <div class="inventory-grid" id="inventoryGrid"></div>
+      </section>
+
+      <!-- ВКЛАДКА 11: АЧИВКИ (ДОСТИЖЕНИЯ) -->
+      <section id="tab-achievements" class="tab-view">
+        <div class="section-header">
+          <h2 class="section-title"><span class="title-decor"></span> ШУТОЧНЫЕ ДОСТИЖЕНИЯ</h2>
+          <span class="section-tag">Открывай ачивки и получай дополнительные награды!</span>
+        </div>
+        <div class="achievements-grid" id="achievementsGrid"></div>
+      </section>
+
+    </main>
+
+    <!-- Подвал сайта -->
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <div class="footer-logo">MARAR<span>DROP</span> 3.0</div>
+        <p class="footer-note">
+          Данный проект является шуточным прототипом. Все совпадения с реальными шансами на выигрыш случайны.
+          Никакие реальные средства не принимаются и не выплачиваются.
+        </p>
+        <div class="footer-credit">
+          Сделано с юмором, черным стилем, белыми линиями и красным неоном 🔥
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- МОДАЛЬНОЕ ОКНО: БИЗНЕС И ПАССИВНЫЙ ДОХОД -->
+  <div class="modal-overlay" id="businessModal">
+    <div class="modal-container business-modal-container">
+      <button class="modal-close" id="closeBusinessModal">&times;</button>
+      <div class="modal-header">
+        <h3 class="modal-case-title">🏪 ИМПЕРИЯ МАРАРА (ПАССИВНЫЙ ДОХОД)</h3>
+        <p class="modal-case-sub">Инвестируй шуточный капитал и получай монеты каждую секунду!</p>
+      </div>
+
+      <div class="business-vault-panel">
+        <div class="vault-accumulated">
+          <span>Накоплено в кассе:</span>
+          <div class="vault-amount"><span id="vaultAmount">0</span> <span class="currency-symbol">MD</span></div>
+        </div>
+        <button class="btn btn-primary-glow btn-collect-profit" id="btnCollectProfit">
+          💰 ЗАБРАТЬ ПРИБЫЛЬ
+        </button>
+      </div>
+
+      <div class="business-cards-grid" id="businessCardsGrid">
+        <!-- 4 бизнеса генерируются из JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- МОДАЛЬНОЕ ОКНО: ПРОФИЛЬ И КАСТОМИЗАЦИЯ -->
+  <div class="modal-overlay" id="profileModal">
+    <div class="modal-container profile-modal-container">
+      <button class="modal-close" id="closeProfileModal">&times;</button>
+      <div class="modal-header">
+        <h3 class="modal-case-title">🪪 ПРОФИЛЬ ИГРОКА</h3>
+        <p class="modal-case-sub" id="profileTitleSub">Звание: Первокурсник Общаги</p>
+      </div>
+
+      <div class="profile-avatar-select-wrap">
+        <h4>Выбери свой аватар:</h4>
+        <div class="avatar-options-row" id="avatarOptionsRow">
+          <!-- Аватарки генерируются из JS -->
+        </div>
+      </div>
+
+      <div class="profile-stats-list">
+        <div class="pstat-row" id="profileTgRow" style="display: none;"><span>Telegram аккаунт:</span> <b id="profileTgUser">-</b></div>
+        <div class="pstat-row"><span>Текущий уровень:</span> <b id="profileLvl">1</b></div>
+        <div class="pstat-row"><span>Всего заработано XP:</span> <b id="profileXp">0 XP</b></div>
+        <div class="pstat-row"><span>Побед в битвах кейсов:</span> <b id="profileBattles">0</b></div>
+        <div class="pstat-row"><span>Пассивный доход:</span> <b id="profileIncome">+0 MD/сек</b></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ВЫДВИЖНОЙ ЧАТ С БОТАМИ -->
+  <aside class="chat-drawer" id="chatDrawer">
+    <div class="chat-header">
+      <div class="chat-title">
+        <span class="pulse-dot"></span> ОНЛАЙН ЧАТ
+        <span class="chat-count">1,498 чел.</span>
+      </div>
+      <button class="chat-close" id="btnCloseChat">&times;</button>
+    </div>
+    <div class="chat-messages" id="chatMessages"></div>
+    <form class="chat-input-bar" id="chatForm">
+      <input type="text" id="chatInput" placeholder="Написать в чат..." maxlength="120" autocomplete="off">
+      <button type="submit" class="btn-chat-send">➤</button>
+    </form>
+  </aside>
+
+  <!-- МОДАЛЬНОЕ ОКНО: КОЛЕСО ФОРТУНЫ -->
+  <div class="modal-overlay" id="wheelModal">
+    <div class="modal-container wheel-modal-container">
+      <button class="modal-close" id="closeWheelModal">&times;</button>
+      <div class="modal-header">
+        <h3 class="modal-case-title">🎡 КОЛЕСО ФОРТУНЫ МАРАРА</h3>
+        <p class="modal-case-sub">Бесплатный спин каждые 2 минуты!</p>
+      </div>
+      <div class="wheel-box">
+        <div class="wheel-pointer">▼</div>
+        <canvas id="wheelCanvas" width="340" height="340"></canvas>
+      </div>
+      <div class="wheel-actions">
+        <button class="btn btn-primary-glow" id="btnSpinWheel">КРУТИТЬ КОЛЕСО</button>
+        <div class="wheel-timer-notice" id="wheelTimerNotice">Спин готов!</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- МОДАЛЬНОЕ ОКНО: ПРОМОКОДЫ -->
+  <div class="modal-overlay" id="promoModal">
+    <div class="modal-container promo-modal-container">
+      <button class="modal-close" id="closePromoModal">&times;</button>
+      <div class="modal-header">
+        <h3 class="modal-case-title">🎁 СЕКРЕТНЫЕ ПРОМОКОДЫ</h3>
+        <p class="modal-case-sub">Введи промокод и получи халявные монеты или секретные призы!</p>
+      </div>
+      <div class="promo-box">
+        <input type="text" id="promoCodeInput" placeholder="ВВЕДИТЕ ПРОМОКОД..." class="promo-input">
+        <button class="btn btn-primary-glow btn-activate-promo" id="btnActivatePromo">АКТИВИРОВАТЬ</button>
+      </div>
+      <div class="promo-hints">
+        <span class="promo-hints-title">💡 Подсказки для тестеров:</span>
+        <code>MARAR2026</code> (+1 000 MD), <code>SHAVUHA</code> (+500 MD + Шаурма), <code>BABLO</code> (+2 500 MD), <code>ADMIN</code> (Шуточный бан).
+      </div>
+    </div>
+  </div>
+
+  <!-- МОДАЛЬНОЕ ОКНО: ШУТОЧНЫЙ БАН -->
+  <div class="modal-overlay" id="banModal">
+    <div class="modal-container ban-modal-container">
+      <div class="ban-alert-icon">⚠️</div>
+      <h2 class="ban-title">ВЫ ЗАБАНЕНЫ ЗА ПОПЫТКУ ВЗЛОМА СИСТЕМЫ!</h2>
+      <p class="ban-desc">Служба безопасности зафиксировала читерство. До разбана осталось:</p>
+      <div class="ban-countdown" id="banCountdown">5</div>
+      <p class="ban-joke">Не переживай, это шутка! Держи +1 MD на мороженое :)</p>
+    </div>
+  </div>
+
+  <!-- МОДАЛЬНОЕ ОКНО: ОТКРЫТИЕ КЕЙСА -->
+  <div class="modal-overlay" id="caseModal">
+    <div class="modal-container">
+      <button class="modal-close" id="modalClose">&times;</button>
+      <div class="modal-header">
+        <h3 class="modal-case-title" id="modalCaseTitle">Кейс: Загрузка...</h3>
+        <p class="modal-case-sub" id="modalCaseSub">Стоимость: 0 MD</p>
+      </div>
+
+      <!-- Панель мульти-открытия и турбо режима -->
+      <div class="case-open-options">
+        <div class="case-count-selector">
+          <span class="count-label">Количество:</span>
+          <button class="btn-case-count active" data-count="1">1x</button>
+          <button class="btn-case-count" data-count="2">2x</button>
+          <button class="btn-case-count" data-count="3">3x</button>
+          <button class="btn-case-count" data-count="5">5x</button>
+        </div>
+        <button class="btn-case-fast" id="btnCaseFast" title="Мгновенный показ выпавшего дропа">
+          ⚡ Турбо: <span id="caseFastStatus">ВЫКЛ</span>
+        </button>
+      </div>
+
+      <div class="case-roulette-box" id="caseRouletteBox">
+        <div class="case-center-line"></div>
+        <div class="case-strip" id="caseStrip"></div>
+      </div>
+
+      <div class="modal-actions" id="modalActions">
+        <button class="btn btn-primary-glow btn-open-case" id="btnStartOpen">ОТКРЫТЬ КЕЙС (1x)</button>
+      </div>
+
+      <!-- Одиночный результат дропа -->
+      <div class="win-result-box" id="winResultBox">
+        <div class="win-tag" id="winResultTag">ВЫПАЛ ПРЕДМЕТ!</div>
+        <div class="win-item-display" id="winItemDisplay"></div>
+        <div class="win-actions">
+          <button class="btn btn-keep" id="btnKeepItem">В инвентарь</button>
+          <button class="btn btn-sell" id="btnSellItem">Продать за <span id="winSellPrice">0</span> MD</button>
+          <button class="btn btn-open-again" id="btnOpenAgain">Открыть еще раз</button>
+        </div>
+      </div>
+
+      <!-- Мульти-результат дропа (для 2x, 3x, 5x) -->
+      <div class="win-multi-box" id="winMultiResultBox" style="display: none;">
+        <div class="win-tag">ВЫПАЛО НЕСКОЛЬКО ПРЕДМЕТОВ!</div>
+        <div class="multi-items-grid" id="winMultiGrid"></div>
+        <div class="multi-actions-bar">
+          <button class="btn btn-keep" id="btnMultiKeepAll">🎒 Забрать всё в инвентарь</button>
+          <button class="btn btn-sell" id="btnMultiSellAll">💰 Продать всё за <span id="winMultiSellPrice">0</span> MD</button>
+          <button class="btn btn-open-again" id="btnMultiOpenAgain">Открыть еще раз</button>
+        </div>
+      </div>
+
+      <div class="case-contents-preview">
+        <h4>Что может выпасть в этом кейсе:</h4>
+        <div class="preview-items-row" id="casePreviewItems"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- МОДАЛЬНОЕ ОКНО: ТАБЛИЦА ВЫПЛАТ СЛОТА -->
+  <div class="modal-overlay" id="paytableModal">
+    <div class="modal-container paytable-modal-container">
+      <button class="modal-close" id="closePaytableModal">&times;</button>
+      <div class="modal-header">
+        <h3 class="modal-case-title">📖 ТАБЛИЦА ВЫПЛАТ MARAR BONANZA</h3>
+        <p class="modal-case-sub">20 фиксированных линий выплат (выплаты начисляются слева направо)</p>
+      </div>
+
+      <div class="paytable-symbols-grid">
+        <div class="pay-sym-card top-sym">
+          <div class="sym-big-icon">👑</div>
+          <div class="sym-name">Золотой Дошик</div>
+          <div class="sym-rates">5x = 50x | 4x = 20x | 3x = 5x</div>
+        </div>
+        <div class="pay-sym-card">
+          <div class="sym-big-icon">🚗</div>
+          <div class="sym-name">Батина Девятка</div>
+          <div class="sym-rates">5x = 25x | 4x = 10x | 3x = 3x</div>
+        </div>
+        <div class="pay-sym-card">
+          <div class="sym-big-icon">🥒</div>
+          <div class="sym-name">Батин Рассол</div>
+          <div class="sym-rates">5x = 15x | 4x = 6x | 3x = 2x</div>
+        </div>
+        <div class="pay-sym-card">
+          <div class="sym-big-icon">🐱</div>
+          <div class="sym-name">Кот Шлёпа</div>
+          <div class="sym-rates">5x = 10x | 4x = 4x | 3x = 1.5x</div>
+        </div>
+        <div class="pay-sym-card">
+          <div class="sym-big-icon">🌯</div>
+          <div class="sym-name">Шаурма</div>
+          <div class="sym-rates">5x = 6x | 4x = 2.5x | 3x = 1x</div>
+        </div>
+        <div class="pay-sym-card">
+          <div class="sym-big-icon">🪪</div>
+          <div class="sym-name">Студенческий</div>
+          <div class="sym-rates">5x = 5x | 4x = 2x | 3x = 0.8x</div>
+        </div>
+        <div class="pay-sym-card">
+          <div class="sym-big-icon">📜</div>
+          <div class="sym-name">Шпаргалка</div>
+          <div class="sym-rates">5x = 4x | 4x = 1.5x | 3x = 0.6x</div>
+        </div>
+        <div class="pay-sym-card">
+          <div class="sym-big-icon">🥣</div>
+          <div class="sym-name">Пустой Дошик</div>
+          <div class="sym-rates">5x = 3x | 4x = 1x | 3x = 0.4x</div>
+        </div>
+      </div>
+
+      <div class="paytable-special-row">
+        <div class="spec-card">
+          <div class="spec-icon">🃏</div>
+          <div>
+            <b>WILD (ДЖОКЕР)</b>
+            <p>Заменяет любые обычные символы на выигрышных линиях, кроме Скаттера и Бомбы.</p>
+          </div>
+        </div>
+        <div class="spec-card">
+          <div class="spec-icon">⚡</div>
+          <div>
+            <b>SCATTER (БОНУС)</b>
+            <p>3, 4 или 5 скаттеров в любом месте экрана активируют 10, 12 или 15 Бесплатных Вращений!</p>
+          </div>
+        </div>
+        <div class="spec-card">
+          <div class="spec-icon">💣</div>
+          <div>
+            <b>МНОЖИТЕЛИ (БОНУСКА)</b>
+            <p>Падают только в фриспинах (от x2 до x100). Все выигрыши спина умножаются на сумму множителей!</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- МОДАЛЬНОЕ ОКНО: BIG WIN / ОКОНЧАНИЕ БОНУСКИ -->
+  <div class="modal-overlay" id="slotBigWinModal">
+    <div class="modal-container bigwin-modal-container">
+      <div class="bigwin-particles">✨ 💰 🔥 👑 💸</div>
+      <div class="bigwin-title" id="slotBigWinTitle">BIG WIN!</div>
+      <div class="bigwin-sub" id="slotBigWinSub">НЕВЕРОЯТНЫЙ ЗАНОС В СЛОТЕ</div>
+      <div class="bigwin-amount" id="slotBigWinAmount">0 MD</div>
+      <button class="btn btn-primary-glow btn-collect-bigwin" id="btnCollectBigWin">
+        💰 ЗАБРАТЬ КУШ
+      </button>
+    </div>
+  </div>
+
+  <!-- МОДАЛЬНОЕ ОКНО: ВЫБОР ПРЕДМЕТА ИЗ ИНВЕНТАРЯ ДЛЯ АПГРЕЙДА -->
+  <div class="modal-overlay" id="upgInventoryModal">
+    <div class="modal-container upg-inv-modal-container">
+      <button class="modal-close" id="closeUpgInvModal">&times;</button>
+      <div class="modal-header">
+        <h3 class="modal-case-title">🎒 ВЫБЕРИ ПРЕДМЕТ ДЛЯ АПГРЕЙДА</h3>
+        <p class="modal-case-sub">Выбери скин из своего инвентаря, который хочешь отправить на прокачку</p>
+      </div>
+      <div class="upg-inv-picker-grid" id="upgInvPickerGrid"></div>
+    </div>
+  </div>
+
+  <!-- ВСПЛЫВАЮЩИЕ УВЕДОМЛЕНИЯ -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
